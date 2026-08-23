@@ -39,8 +39,7 @@ search, filtering, saved lists, stored documents, and routines cost nothing.
 
 MIT. See [LICENSE](LICENSE).
 
-The license covers this command line program. It is not permission to use the
-Pinloop name, the servers, or the job postings the servers hold.
+The license covers the CLI only.
 
 ## Links
 
