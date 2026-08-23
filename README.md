@@ -1,9 +1,5 @@
 # Pinloop CLI
 
-This repository holds the source of the `pinloop` command, and nothing else.
-It is the same code published to npm, so you can read what the program does on
-your machine before you install it.
-
 Pinloop is a job search tool built for your coding agent to run from a terminal.
 
 It holds a large collection of frequently updated job postings, can hold your
@@ -38,24 +34,6 @@ account. Login goes through a browser, with no password.
 A free account gets a limited number of judged postings and semantic searches per
 month, and `pinloop upgrade` opens the page to raise those limits. Keyword
 search, filtering, saved lists, stored documents, and routines cost nothing.
-
-## What is here and what is not
-
-Everything in this repository runs on your own machine. The program stores a
-login token and your settings under your home directory, and makes HTTP calls to
-Pinloop's servers for everything else.
-
-The servers are a separate, closed codebase and are not in this repository. The
-job postings, the profile you store, the AI judging, the accounts and the
-payments all live there.
-
-## Build it yourself
-
-```
-npm install
-npm run build
-node dist/cli/pinloop.js
-```
 
 ## License
 
