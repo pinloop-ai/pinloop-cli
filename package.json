@@ -1,0 +1,27 @@
+{
+  "name": "pinloop",
+  "version": "0.3.0",
+  "description": "The Pinloop command line: enable your coding agent to run your whole job search.",
+  "type": "module",
+  "bin": {
+    "pinloop": "./dist/cli/pinloop.js"
+  },
+  "homepage": "https://pinloop.ai",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "picocolors": "^1.1.1",
+    "log-update": "^8.0.0",
+    "cli-spinners": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
