@@ -205,12 +205,12 @@ feedback, and you'll get his response straight through this CLI.
 I've read the full instructions for Pinloop, so if you want to explore anything
 further, just say so and we'll go deeper."
 
-Then tell the person where they stand: read how much of this month's usage
-they have left back from their account rather than working it out, and say it
-plainly. Then say: "If you upgrade, you get over 5,000 quickly judged postings
-a month, or 400 full judgments, plus unlimited plain-English searches (if
-you're not spamming hundreds per minute). I can run pinloop upgrade if you want
-to learn more."
+Then say: "Everything we did today works on the free plan, which comes with 25
+full judgments a month. If you want your job search to run for you
+automatically without you active, upgrading to Pro lets a routine run on a
+schedule, or when new postings arrive. It also raises that judging limit 400
+full judgments or 5000+ quick judgments a month. I can run pinloop upgrade if
+you want to learn more."
 
 Don't name a price yourself. Leave all of this as things they can pick from,
 not a list to follow, and go where they point.`,

@@ -271,8 +271,10 @@ give it ids or give it none and pipe the JSON in. Everything else that takes
 posting ids, "pinloop judgment delete" and "pinloop judgment get" among them,
 takes them as words on the command line only and reads nothing from a pipe.
 
-One account may hold 100 tabs, each holding up to 1,000 postings; 10 schedules;
-and 10 watches. A routine may hold up to 20 steps.
+One account may hold 100 tabs, each holding up to 1,000 postings, and a routine
+may hold up to 20 steps; those hold whether or not the account pays. An account
+that pays may also hold 10 schedules and 10 watches; an account that does not
+pay may hold none of either.
 
 One judge run judges up to 100 postings. One quick screening run takes up to
 1,000 postings and sends them to the model in groups of up to 100.
@@ -462,7 +464,9 @@ done rather than hiding it: the judge step bought nothing because all three
 verdicts were already stored, and the tab step put in 0 of the 1 posting it was
 handed because that posting was already in the tab.
 
-The watch has no cadence you set. It looks about once an hour, runs the routine
+Storing a watch needs an account that pays for a subscription; this account
+does, which is why the command above succeeded rather than being refused. The
+watch has no cadence you set. It looks about once an hour, runs the routine
 over only the postings that arrived since it last looked, and does nothing at
 all in an hour when nothing arrived.`,
 
@@ -787,7 +791,8 @@ can read.`,
 keyboard. --routine names the routine and --every-hours is a whole number of
 hours from 1 to 168, both required. --first-due-at fixes when the first run
 happens, and the time of day it lands on is the time of day every later run lands
-on. An account may hold 10 schedules.`,
+on. Storing a schedule needs an account that pays for a subscription, and
+"pinloop upgrade" starts one. An account may hold 10 schedules.`,
 
   'schedule get': `Shows one schedule, when it next runs, and how its last run went.`,
 
@@ -800,9 +805,10 @@ itself stays.`,
   'watch put': `Stores a watch: one routine, run over only the postings that arrived in the corpus
 since this watch last looked. --routine names the routine, whose first step has to
 be a search or a list, and is required. A watch has no cadence of its own; it
-looks about once an hour. Nothing arriving means nothing runs. An account may hold
-10 watches. A routine whose last step adds to a tab is what fills a list of new
-finds overnight.`,
+looks about once an hour. Nothing arriving means nothing runs. Storing a watch
+needs an account that pays for a subscription, and "pinloop upgrade" starts one.
+An account may hold 10 watches. A routine whose last step adds to a tab is what
+fills a list of new finds overnight.`,
 
   'watch get': `Shows one watch, when it next looks, and how its last firing went, including how
 many postings had arrived and how many of them matched.`,
