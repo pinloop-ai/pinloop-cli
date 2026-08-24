@@ -521,11 +521,19 @@ are read, and the subscription is cancelled.
 Nothing more is printed in the terminal afterwards, whatever the person does in
 the browser. A subscription that starts raises this account's monthly judging
 and meaning-searching usage limits from the next command onwards, and "pinloop"
-typed on its own prints what they have become. A cancelled subscription keeps
-the raised usage limits until the last day already paid for and then returns to
-the free ones. A renewal whose card fails changes nothing while the card is
-retried over about two weeks; if it is never paid the account returns to the
-free usage limits.`,
+typed on its own prints what those limits have become; a subscription that
+starts also lets the account store schedules and watches, which is what lets a
+saved routine run with nobody at the keyboard. A cancelled subscription keeps
+the raised usage limits, and keeps its schedules and watches firing, until the
+last day already paid for; after that day the usage limits return to the free
+ones and the schedules and watches stop firing. A cancelled subscription
+deletes no schedule and no watch: "pinloop" typed on its own still lists every
+schedule and watch the account stored, with a line saying they are not running
+because the subscription ended, and they fire again if the person subscribes
+again. A renewal whose card fails changes nothing while the card is retried over
+about two weeks; if it is never paid the account returns to the free usage
+limits and its schedules and watches stop firing, in the same way as a
+cancellation.`,
 
   // -------------------------------------------------------------------------
   // The five that take postings and hand postings on
