@@ -924,6 +924,457 @@ function printJson(answer: Record<string, unknown>): void {
   process.stdout.write(`${JSON.stringify(answer, null, 2)}\n`);
 }
 
+// ---------------------------------------------------------------------------
+// The first of the two calls five commands now take
+// (specs/feature-judge-confirmation.md, AGREED 2026-08-26)
+// ---------------------------------------------------------------------------
+
+/**
+ * The option every one of those five commands takes, declared in one place so
+ * the five spellings cannot drift apart.
+ */
+const CONFIRM_OPTION_HELP =
+  'the token the first call printed; only a call carrying it judges or stores anything';
+
+/**
+ * Whether the server stopped this call to have the person asked first, rather
+ * than doing what it was asked.
+ *
+ * A call that really judged or really stored something carries no confirm token
+ * at all, and that is the one thing that tells the two answers apart.
+ */
+function stoppedToAsk(json: unknown): boolean {
+  const token = (json as { confirm_token?: unknown } | undefined)?.confirm_token;
+  return typeof token === 'string' && token.trim() !== '';
+}
+
+/**
+ * Which of the five commands a stopped call is being reported for, plus every
+ * piece of context each command already has that the server's answer does not
+ * carry: the routine name a person typed after `--routine`, for the two
+ * automation commands that name a routine directly. `schedule put` and `watch
+ * put` are the only two that need it. `routine put`'s block names the schedule
+ * or watch already running the routine instead, which is server-known rather
+ * than typed on this call, and `judge` and `routine run` never name a routine
+ * in their block at all (approved-gate-text.md, drafted 2026-08-26).
+ *
+ * Every field beyond `kind` is also what `nextCommandLine` below reads to
+ * print the whole next command a person can copy and run, so each is the
+ * resolved value the second call actually needs — not necessarily the exact
+ * text the person typed. A judge call's `ids` is the full resolved list even
+ * when the first call read them from a pipe, and a `routine run` call's
+ * `within` is the resolved comma-separated set even when the person typed `-`
+ * to read it from a pipe, because a command line has no pipe to read from a
+ * second time and still has to work when pasted on its own.
+ */
+type ConfirmGate =
+  | { kind: 'judge'; ids: readonly string[]; quick: boolean }
+  | { kind: 'routine-run'; name: string; within?: string }
+  | {
+      kind: 'schedule-put';
+      routineName: string;
+      name: string;
+      everyHours: string;
+      firstDueAt?: string;
+    }
+  | { kind: 'watch-put'; routineName: string; name: string }
+  | { kind: 'routine-put'; name: string; description?: string; steps?: string };
+
+/** "26" and "1,000": how every count of judgments is written out. */
+function withCommas(n: number): string {
+  return n.toLocaleString('en-US');
+}
+
+/** "1 full judgment" / "4 full judgments" / "1,000 quick judgments". */
+function judgmentPhrase(count: number, kind: string): string {
+  return `${withCommas(count)} ${kind} judgment${count === 1 ? '' : 's'}`;
+}
+
+/**
+ * How many judgments of one kind an account has left to run this month, as
+ * text: a real number is written out with commas, and the one non-numeric
+ * value the server ever sends here, `UNLIMITED` (`src/server/limits.ts`,
+ * `'unlimited'`), is printed exactly as sent rather than forced through
+ * `Number()`, which would otherwise turn it into "NaN".
+ */
+function leftAmount(remaining: unknown): { text: string; plural: boolean } {
+  const asNumber = Number(remaining);
+  if (Number.isFinite(asNumber)) return { text: withCommas(asNumber), plural: asNumber !== 1 };
+  return { text: String(remaining), plural: true };
+}
+
+/** The exact-figure rate a fact is stated with: "once an hour" / "once every 24 hours". */
+function rateFactual(hours: number): string {
+  return hours === 1 ? 'once an hour' : `once every ${hours} hours`;
+}
+
+/**
+ * The rate as it is spoken to the person, colloquially, inside the
+ * coding-agent line: "once an hour" and "once a day" are the two the approved
+ * text gives verbatim; anything else falls back to the exact figure.
+ */
+function rateColloquial(hours: number): string {
+  if (hours === 1) return 'once an hour';
+  if (hours === 24) return 'once a day';
+  return rateFactual(hours);
+}
+
+/**
+ * "up to 100 full judgments" for a routine holding one kind of judging step, or
+ * "up to 1,000 quick judgments and up to 100 full judgments" for one holding
+ * both, quick named first, matching the approved text's own ordering. Never
+ * one combined figure: a full judgment and a quick judgment cost this account's
+ * month different amounts, so adding them first would mean converting both back
+ * into Pinloop's own bookkeeping (specs/feature-judge-confirmation.md).
+ */
+function ceilingPhrase(judgments: Record<string, number>): string {
+  return ['quick', 'full']
+    .filter((kind) => kind in judgments)
+    .map((kind) => `up to ${judgmentPhrase(judgments[kind]!, kind)}`)
+    .join(' and ');
+}
+
+/**
+ * "full judge step" / "quick-judge step" / "judge step and a quick-judge step":
+ * how the naming line (point 1 of a stored schedule, watch, or routine's block)
+ * names which step, or steps, the routine reaches.
+ */
+function stepLabelNaming(kinds: string[]): string {
+  if (kinds.length > 1) return 'judge step and a quick-judge step';
+  return kinds[0] === 'quick' ? 'quick-judge step' : 'full judge step';
+}
+
+/**
+ * "judge step" / "quick-judge step" / "judge step and quick-judge step": how
+ * the free-alternative sentence (point 4 of that same block) names the step
+ * being left out. Never carries "full", because leaving out "the judge step" is
+ * unambiguous on its own; "quick-judge step" keeps its own word because "the
+ * judge step" alone would misname it.
+ */
+function stepLabelLeftOut(kinds: string[]): string {
+  if (kinds.length > 1) return 'judge step and quick-judge step';
+  return kinds[0] === 'quick' ? 'quick-judge step' : 'judge step';
+}
+
+/** "1 hour" / "2 hours": how the token's own lifetime is spoken. */
+function hoursPhrase(hours: number): string {
+  return `${hours} hour${hours === 1 ? '' : 's'}`;
+}
+
+/**
+ * The "matches only ..." clause under the token, naming exactly what a second
+ * call has to match for that token to work: different at each of the five
+ * commands, because each parks its token under different arguments
+ * (src/server/confirm.ts, confirmSubjectForJudge and confirmSubjectForRow).
+ */
+function tokenScope(gate: ConfirmGate): string {
+  switch (gate.kind) {
+    case 'judge':
+      return 'these exact postings';
+    case 'routine-run':
+      return 'this exact routine at this exact step';
+    case 'schedule-put':
+      return 'this exact schedule name, routine name, and cadence';
+    case 'watch-put':
+      return 'this exact watch name and routine name';
+    case 'routine-put':
+      return 'this exact routine name and these exact steps';
+  }
+}
+
+/**
+ * One word of a shell command line, quoted only when it needs to be.
+ *
+ * A posting id, a routine name, a schedule name, and a cadence in hours are
+ * all plain letters, digits, dashes, and commas — the approved gate text
+ * prints those bare, unquoted, exactly as a person would type them. Anything
+ * else (a `--description` a person wrote in their own words, or a `--steps`
+ * JSON blob) can hold spaces, quotes, or other characters a shell would
+ * otherwise split on, so it is wrapped in single quotes, with any single
+ * quote inside it closed out and reopened around an escaped one.
+ */
+function shellArg(value: string): string {
+  if (/^[A-Za-z0-9._,:@/-]+$/.test(value)) return value;
+  return `'${value.split("'").join(`'\\''`)}'`;
+}
+
+/**
+ * The whole next command, ready to copy and run, ending in `--confirm` and
+ * the token — served on a silver platter rather than left for a coding agent
+ * to rebuild and risk getting wrong (Andrew, 2026-08-26). Built from the real
+ * arguments the caller actually used, per `ConfirmGate`'s own doc comment,
+ * never from the placeholder-ish forms the approved gate text shows for
+ * `schedule put` and `routine put`.
+ *
+ * A judge call's posting ids are never shortened, even when there are as many
+ * as a hundred of them: a long line is a smaller problem than a coding agent
+ * rebuilding the list wrong (Andrew, 2026-08-26).
+ *
+ * `routine put`'s steps carry into the line only when the caller gave them
+ * directly as `--steps`: that text is already in hand, so the printed
+ * command is self-sufficient. Steps piped in on standard input are left out
+ * instead, because a single command line has no pipe to read from a second
+ * time — running the printed line as it stands then needs `--steps` or a
+ * pipe supplied again. Either way, the printed command always carries the
+ * routine's own name, and its `--description` when one was given.
+ */
+function nextCommandLine(gate: ConfirmGate, token: string): string {
+  const words: string[] = ['pinloop'];
+  switch (gate.kind) {
+    case 'judge':
+      words.push('judge', ...gate.ids.map(shellArg));
+      if (gate.quick) words.push('--quick');
+      break;
+    case 'routine-run':
+      words.push('routine', 'run', shellArg(gate.name));
+      if (gate.within !== undefined) words.push('--within', shellArg(gate.within));
+      break;
+    case 'schedule-put':
+      words.push(
+        'schedule',
+        'put',
+        shellArg(gate.name),
+        '--routine',
+        shellArg(gate.routineName),
+        '--every-hours',
+        shellArg(gate.everyHours),
+      );
+      if (gate.firstDueAt !== undefined) words.push('--first-due-at', shellArg(gate.firstDueAt));
+      break;
+    case 'watch-put':
+      words.push('watch', 'put', shellArg(gate.name), '--routine', shellArg(gate.routineName));
+      break;
+    case 'routine-put':
+      words.push('routine', 'put', shellArg(gate.name));
+      if (gate.description !== undefined) words.push('--description', shellArg(gate.description));
+      if (gate.steps !== undefined) words.push('--steps', shellArg(gate.steps));
+      break;
+  }
+  words.push('--confirm', token);
+  return words.join(' ');
+}
+
+/**
+ * Prints what the second call would do and the whole next command a person
+ * can copy and run to make it.
+ *
+ * Under --json it is one JSON object on standard output and nothing else, so a
+ * following command reads the token and every number straight out of it — the
+ * server's own CONFIRM_REFUSAL sentence rides along there under
+ * `confirm_message`, unchanged. Read by a person it is plain lines on
+ * standard error, built to the wording Andrew approved (approved-gate-text.md,
+ * drafted 2026-08-26 against specs/feature-judge-confirmation.md and
+ * .claude/skills/printed-message/SKILL.md): what would really be judged and by
+ * which model, what that would spend and what would be left, what a judgment
+ * gives that reading the material yourself does not, the free path open to a
+ * coding agent itself, one plain sentence for that agent to put to the
+ * person, and the whole next command, ending in --confirm and the token, with
+ * a note underneath on how long the token lasts and what it matches. The
+ * server's CONFIRM_REFUSAL sentence is not printed a second time here: this
+ * block already says, in its own words, that nothing was judged or stored and
+ * what the coding agent does next, so repeating that server sentence on top
+ * would say the same thing a third time (Andrew, 2026-08-26).
+ */
+function reportConfirmation(json: any, asJson: boolean, gate: ConfirmGate): void {
+  const judgments = (json?.confirm_judgments ?? {}) as Record<string, number>;
+  const left = (json?.confirm_left ?? {}) as Record<string, number | string>;
+  const token = String(json?.confirm_token ?? '');
+  const tokenHours = Number(json?.confirm_token_hours ?? 1);
+
+  if (asJson) {
+    printJson({
+      confirm_token: token,
+      confirm_message: String(json?.confirm_message ?? ''),
+      confirm_judgments: judgments,
+      confirm_token_hours: tokenHours,
+      ...(json?.confirm_sending === undefined ? {} : { confirm_sending: json.confirm_sending }),
+      ...(json?.confirm_left === undefined ? {} : { confirm_left: left }),
+      ...(json?.confirm_model === undefined ? {} : { confirm_model: json.confirm_model }),
+      ...(json?.confirm_named === undefined ? {} : { confirm_named: json.confirm_named }),
+      ...(json?.confirm_skipped === undefined ? {} : { confirm_skipped: json.confirm_skipped }),
+      ...(json?.confirm_cadence_hours === undefined
+        ? {}
+        : { confirm_cadence_hours: json.confirm_cadence_hours }),
+      ...(json?.confirm_fired_by === undefined ? {} : { confirm_fired_by: json.confirm_fired_by }),
+    });
+    return;
+  }
+
+  const lines: string[] = [];
+  const kinds = Object.keys(judgments);
+
+  if (gate.kind === 'judge' || gate.kind === 'routine-run') {
+    // A judging run holds exactly one kind: a call is either a full judgement
+    // or a quick screen, never both at once.
+    const kind = kinds[0] ?? 'full';
+    const count = judgments[kind] ?? 0;
+    const remaining = left[kind];
+    const sending = Number(json?.confirm_sending ?? count);
+    const named = Number(json?.confirm_named ?? sending);
+    const skipped = Number(json?.confirm_skipped ?? 0);
+    const model = typeof json?.confirm_model === 'string' ? json.confirm_model : undefined;
+    const skippedClause =
+      skipped > 0 ? `; ${withCommas(skipped)} of ${withCommas(named)} already have a saved judgment and would be skipped` : '';
+
+    // Point 1: what would really be sent, and to which model.
+    if (gate.kind === 'judge') {
+      const verb = kind === 'quick' ? 'would quickly screen' : 'would judge';
+      const modelClause = kind === 'full' && model ? ` with ${model}` : '';
+      lines.push(
+        `${verb} ${withCommas(sending)} of ${withCommas(named)} named postings${modelClause}${skippedClause}`,
+      );
+    } else {
+      const verb = kind === 'quick' ? 'would quickly screen' : 'would judge';
+      const modelClause = kind === 'full' && model ? ` with ${model}` : '';
+      const stepWord = kind === 'quick' ? 'quick-judge step' : 'judge step';
+      lines.push(
+        `${verb} ${withCommas(sending)} of ${withCommas(named)} postings${modelClause} at the ` +
+          `routine's ${stepWord}${skippedClause}`,
+      );
+    }
+
+    // Point 2: what confirming would spend, and what would still be left.
+    const remainingAmount = leftAmount(remaining);
+    lines.push(
+      `confirming would use ${judgmentPhrase(count, kind)}, leaving room for ` +
+        `${remainingAmount.text} more ${kind} judgment${remainingAmount.plural ? 's' : ''} this month`,
+    );
+
+    // Point 3: what a judgment gives that reading the material yourself does
+    // not. Left out entirely for a quick screen, which never sends job
+    // description text and so gives nothing beyond the free path itself.
+    if (kind === 'full') {
+      lines.push(
+        "a judgment is Pinloop's own reasoning pass against everything in this account's " +
+          'profile, saved as a graded verdict (no, weak, fair, or strong) for reuse later at ' +
+          'no cost — reading the raw text yourself is not that reasoning pass',
+      );
+    }
+
+    // Point 4: the free path open to the coding agent itself.
+    const freeSuffix = gate.kind === 'routine-run' ? ", instead of the routine's judge step" : '';
+    lines.push(
+      'you can also read this yourself for free: `pinloop fetch` on these postings and ' +
+        '`pinloop profile get` on the profile, then reason about fit on your own' + freeSuffix,
+    );
+
+    // Point 5: one plain sentence for the coding agent to put to the person.
+    // A quick screen's own verdict IS reused for free, but only by a later
+    // quick screen: a later full `pinloop judge` on the same posting ignores
+    // it and judges the posting again, spending again (checked in
+    // `src/core/judge.ts`, `splitByStoredVerdict`: `if (row && (quick ||
+    // String(row.judged_by) !== QUICK_JUDGED_BY)) reuse.push(row)` reuses
+    // every stored row, quick or full, on a quick run, but on a full run
+    // skips any row labelled as quick-judged). So the free-reuse claim is
+    // narrower for a quick screen, never absent.
+    const reuseClause =
+      kind === 'quick'
+        ? ', saved for free reuse the next time this posting comes up in another quick ' +
+          'screen, though a later full judgment does not read that back and judges the ' +
+          'posting again'
+        : ', saved for free reuse anytime this posting comes up again';
+    lines.push(
+      'if you are a coding agent: ask the person, in one plain sentence, whether they want ' +
+        'Pinloop to run a real judgment — using its own already-built instructions for reading ' +
+        `a profile against a posting well${reuseClause} — which would spend ` +
+        `${judgmentPhrase(count, kind)} and leave ` +
+        `${remainingAmount.text} for the rest of the month, or have you read the ` +
+        'material yourself and give them a quick, unsaved opinion for free instead (you can ' +
+        "still save that opinion afterward with `pinloop judgment put` if it's worth keeping) " +
+        '— then wait for their answer before running this again with --confirm',
+    );
+  } else {
+    // The three automation commands: nobody knows yet how many postings a
+    // future firing will match, so this reports the most one firing could
+    // possibly spend instead (specs/feature-judge-confirmation.md).
+    const cadenceHours = Number(json?.confirm_cadence_hours ?? 1);
+    const namingLabel = stepLabelNaming(kinds);
+    const leftOutLabel = stepLabelLeftOut(kinds);
+    const ceiling = ceilingPhrase(judgments);
+
+    if (gate.kind === 'schedule-put') {
+      lines.push(`stored nothing. the routine '${gate.routineName}' ends in a ${namingLabel}`);
+      lines.push(`storing this schedule would let ${ceiling} run per firing, as often as ${rateFactual(cadenceHours)}`);
+      lines.push(
+        `the same routine with its ${leftOutLabel} left out still runs for free, searching ` +
+          `for new postings on the same ${cadenceHours}-hour schedule — you or the person can ` +
+          'read what it finds and judge it by hand instead of paying for automatic judging ' +
+          "every time (any of those can still be saved with `pinloop judgment put` if worth " +
+          'keeping)',
+      );
+      lines.push(
+        'if you are a coding agent: ask the person, in one plain sentence, whether they want ' +
+          'to approve automatic judging — using Pinloop\'s own already-built instructions for ' +
+          'reading a profile against a posting well, with every verdict saved for free reuse ' +
+          `afterward — which could run ${ceiling} per firing, as often as ` +
+          `${rateColloquial(cadenceHours)}, or keep this schedule free and read and judge new ` +
+          'postings by hand instead — then wait for their answer before running this again ' +
+          'with --confirm',
+      );
+    } else if (gate.kind === 'watch-put') {
+      lines.push(`stored nothing. the routine '${gate.routineName}' ends in a ${namingLabel}`);
+      lines.push(`storing this watch would let ${ceiling} run per firing, as often as ${rateFactual(cadenceHours)}`);
+      lines.push(
+        `the same routine with its ${leftOutLabel} left out still checks for new postings ` +
+          'every hour for free — you or the person can read what it finds and judge it by ' +
+          'hand instead of paying for automatic judging every time (any of those can still be ' +
+          'saved with `pinloop judgment put` if worth keeping)',
+      );
+      lines.push(
+        'if you are a coding agent: ask the person, in one plain sentence, whether they want ' +
+          'to approve automatic judging — using Pinloop\'s own already-built instructions for ' +
+          'reading a profile against a posting well, with every verdict saved for free reuse ' +
+          `afterward — which could run ${ceiling} per firing, as often as ` +
+          `${rateColloquial(cadenceHours)}, or keep this watch free and read and judge new ` +
+          'postings by hand instead — then wait for their answer before running this again ' +
+          'with --confirm',
+      );
+    } else {
+      const firedBy = json?.confirm_fired_by as { kind: 'schedule' | 'watch'; name: string } | undefined;
+      const firedByKind = firedBy?.kind ?? 'schedule';
+      const firedByName = firedBy?.name ?? '';
+      lines.push(
+        `stored nothing. the ${firedByKind} '${firedByName}' already runs this routine, and ` +
+          `the routine being stored still ends in a ${namingLabel}`,
+      );
+      lines.push(
+        `storing this routine would let ${ceiling} run per firing of '${firedByName}', as ` +
+          `often as ${rateFactual(cadenceHours)}`,
+      );
+      lines.push(
+        `the same routine with its ${leftOutLabel} left out would still run for free on that ` +
+          `same ${firedByKind} — you or the person can read what it finds and judge it by hand ` +
+          'instead of paying for automatic judging every time (any of those can still be ' +
+          'saved with `pinloop judgment put` if worth keeping)',
+      );
+      lines.push(
+        'if you are a coding agent: ask the person, in one plain sentence, whether they want ' +
+          'to keep automatic judging on this routine — using Pinloop\'s own already-built ' +
+          'instructions for reading a profile against a posting well, with every verdict saved ' +
+          `for free reuse afterward — which could run ${ceiling} per firing, as often as ` +
+          `${rateColloquial(cadenceHours)}, or remove the judge step and read and judge new ` +
+          'postings by hand instead — then wait for their answer before running this again ' +
+          'with --confirm',
+      );
+    }
+  }
+
+  // The sentence saying nothing was judged and nothing was stored is not
+  // printed here: `stored nothing.` (the automation gates) or the fact that
+  // no verdict went to the model (points 1–2 above) already say so, and the
+  // "if you are a coding agent" line already tells the agent to put the
+  // choice to the person and wait for an answer before running this again
+  // with --confirm. Printing the server's CONFIRM_REFUSAL sentence as well
+  // would say the same thing a third time. CONFIRM_REFUSAL itself is
+  // untouched: it is still the one sentence every one of the five commands
+  // answers with when the token a second call carries is missing, invented,
+  // made for something else, or stale (src/server/confirm.ts), and it still
+  // rides along unprinted in the JSON form of this same answer.
+  lines.push(`next command: ${nextCommandLine(gate, token)}`);
+  lines.push(`(token expires in ${hoursPhrase(tokenHours)}, matches only ${tokenScope(gate)})`);
+  process.stderr.write(`${lines.join('\n')}\n`);
+}
+
 /**
  * Reads everything given to this command on its standard input, to the end of
  * the input, whether that input is another command's output through a pipe or a
@@ -2924,6 +3375,7 @@ function addJudgeCommands(program: Command): void {
         'facts and without their job description text',
     )
     .option('--json', 'print one JSON object holding the verdicts, instead of blocks')
+    .option('--confirm <token>', CONFIRM_OPTION_HELP)
     .action(async (ids: string[], options: Record<string, string | boolean | undefined>) => {
       const pass = readPass();
       const wanted = await idsToJudge(ids);
@@ -2935,6 +3387,8 @@ function addJudgeCommands(program: Command): void {
       if (keep !== undefined) body['keep'] = keep;
       if (options['again']) body['again'] = true;
       if (quick) body['quick'] = true;
+      const confirming = textOption(options['confirm']);
+      if (confirming !== undefined) body['confirm'] = confirming;
 
       // A real run asks the server to say what is happening while it happens,
       // and prints one line per thing on standard error. A preview asks nobody
@@ -2964,6 +3418,13 @@ function addJudgeCommands(program: Command): void {
         throw new Failure(
           String((json as { message?: unknown }).message ?? 'the judge run failed; try again'),
         );
+      }
+      // Nothing was judged: this is the first of the two calls, and what it
+      // printed is what the second call would do plus the token that confirms it
+      // (specs/feature-judge-confirmation.md, AGREED 2026-08-26).
+      if (stoppedToAsk(json)) {
+        reportConfirmation(json, options['json'] === true, { kind: 'judge', ids: wanted, quick });
+        return;
       }
       const rows = rowsOf(json);
 
@@ -3742,14 +4203,32 @@ function addRoutineCommands(program: Command): void {
     .option('--description <text>', 'what this routine is for')
     .option('--steps <json>', 'the steps as a JSON list, instead of standard input')
     .option('--json', 'print the stored routine, and the version it replaced, as JSON')
+    .option('--confirm <token>', CONFIRM_OPTION_HELP)
     .action(async (name: string, options: Record<string, string | boolean | undefined>) => {
       const pass = readPass();
       const steps = await stepsToStore(name, options);
       const body: Record<string, unknown> = { steps };
       const description = textOption(options['description']);
       if (description !== undefined) body['description'] = description;
+      const confirming = textOption(options['confirm']);
+      if (confirming !== undefined) body['confirm'] = confirming;
 
       const { json } = await callAsAccount(pass, routinePath(name), { method: 'POST', body });
+      // Nothing was stored: a schedule or a watch already fires this routine and
+      // the version being stored can judge, so the person is asked first.
+      if (stoppedToAsk(json)) {
+        // The steps go into the reproduced next command only when they were
+        // given directly as --steps: the piped form has no pipe to read from
+        // a second time (ConfirmGate's own doc comment above).
+        const stepsGiven = textOption(options['steps']);
+        reportConfirmation(json, options['json'] === true, {
+          kind: 'routine-put',
+          name,
+          description,
+          steps: stepsGiven,
+        });
+        return;
+      }
       if (options['json']) {
         printJson({ rows: rowsOf(json), cursor: cursorOf(json) });
         return;
@@ -3837,6 +4316,7 @@ function addRoutineCommands(program: Command): void {
         `them from the JSON piped in; ${LARGE_SETS_MUST_BE_PIPED} (the - form)`,
     )
     .option('--json', 'print one JSON object holding the rows, instead of cards')
+    .option('--confirm <token>', CONFIRM_OPTION_HELP)
     .action(async (name: string, options: Record<string, string | boolean | undefined>) => {
       const pass = readPass();
       const body: Record<string, unknown> = {};
@@ -3844,6 +4324,8 @@ function addRoutineCommands(program: Command): void {
       if (typeof within === 'string' && within !== '') {
         body['within'] = await withinSet(within, 'pinloop routine run');
       }
+      const confirming = textOption(options['confirm']);
+      if (confirming !== undefined) body['confirm'] = confirming;
 
       // A run of a stored sequence can take minutes, so it asks the server to
       // say which step it has reached. A person watching reads that on the one
@@ -3883,6 +4365,21 @@ function addRoutineCommands(program: Command): void {
         throw new Failure(
           String((json as { message?: unknown }).message ?? `the run of your '${name}' routine failed`),
         );
+      }
+      // The run stopped at a judge step so the person can be asked first. It
+      // judged nothing and spent nothing (specs/feature-judge-confirmation.md).
+      if (stoppedToAsk(json)) {
+        // The resolved set of ids, not the raw `--within` text: when the
+        // person typed `-` to read them from a pipe, that pipe is gone by the
+        // time this line is read, so the reproduced command carries the ids
+        // themselves instead (ConfirmGate's own doc comment above).
+        const resolvedWithin = typeof body['within'] === 'string' ? body['within'] : undefined;
+        reportConfirmation(json, options['json'] === true, {
+          kind: 'routine-run',
+          name,
+          within: resolvedWithin,
+        });
+        return;
       }
       const rows = rowsOf(json);
 
@@ -4022,16 +4519,32 @@ function addScheduleCommands(program: Command): void {
         'the time of day it lands on is the time of day every later run lands on',
     )
     .option('--json', 'print the stored schedule, and the version it replaced, as JSON')
+    .option('--confirm <token>', CONFIRM_OPTION_HELP)
     .action(async (name: string, options: Record<string, string | boolean | undefined>) => {
       const pass = readPass();
+      const routineName = textOption(options['routine']) ?? '';
       const body: Record<string, unknown> = {
-        routine: textOption(options['routine']),
+        routine: routineName,
         every_hours: textOption(options['everyHours']),
       };
       const firstDueAt = textOption(options['firstDueAt']);
       if (firstDueAt !== undefined) body['first_due_at'] = firstDueAt;
+      const confirming = textOption(options['confirm']);
+      if (confirming !== undefined) body['confirm'] = confirming;
 
       const { json } = await callAsAccount(pass, schedulePath(name), { method: 'POST', body });
+      // No row was written: the routine this schedule names reaches a judge
+      // step, so the person is asked before it starts firing on its own.
+      if (stoppedToAsk(json)) {
+        reportConfirmation(json, options['json'] === true, {
+          kind: 'schedule-put',
+          routineName,
+          name,
+          everyHours: textOption(options['everyHours']) ?? '',
+          firstDueAt,
+        });
+        return;
+      }
       if (options['json']) {
         printJson({ rows: rowsOf(json), cursor: cursorOf(json) });
         return;
@@ -4209,6 +4722,7 @@ function addWatchCommands(program: Command): void {
         .hideHelp(),
     )
     .option('--json', 'print the stored watch, and the version it replaced, as JSON')
+    .option('--confirm <token>', CONFIRM_OPTION_HELP)
     .action(async (name: string, options: Record<string, string | boolean | undefined>) => {
       const routine = textOption(options['routine']) ?? '';
       if (options['everyHours'] !== undefined || options['firstDueAt'] !== undefined) {
@@ -4216,10 +4730,21 @@ function addWatchCommands(program: Command): void {
       }
 
       const pass = readPass();
+      const confirming = textOption(options['confirm']);
       const { json } = await callAsAccount(pass, watchPath(name), {
         method: 'POST',
-        body: { routine },
+        body: { routine, ...(confirming === undefined ? {} : { confirm: confirming }) },
       });
+      // No row was written: the routine this watch names reaches a judge step,
+      // so the person is asked before it starts looking every hour on its own.
+      if (stoppedToAsk(json)) {
+        reportConfirmation(json, options['json'] === true, {
+          kind: 'watch-put',
+          routineName: routine,
+          name,
+        });
+        return;
+      }
       if (options['json']) {
         printJson({ rows: rowsOf(json), cursor: cursorOf(json) });
         return;

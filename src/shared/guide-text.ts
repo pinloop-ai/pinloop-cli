@@ -11,15 +11,23 @@
  * naming that command, so nobody can add a command to Pinloop and leave it
  * undocumented by accident.
  *
- * Three things are deliberately not in this file. There is no count of what one
+ * Two things are deliberately not in this file. There is no count of what one
  * account has spent this month, because a number written here would be compiled
  * into a copy of the program somebody installed weeks ago and would be wrong;
  * the guide names `pinloop` typed on its own as the place those numbers are
- * read. There are no dollar amounts anywhere. And there is no instruction
- * telling an agent to ask the person before spending money (Andrew, 2026-08-18,
- * emphatic, reaffirmed 2026-08-19): what protects the person's money is the
- * allowance the server enforces, and a sentence asking permission protects
- * nobody while making every run slower.
+ * read. And there are no dollar amounts anywhere.
+ *
+ * A third thing was deliberately absent until 2026-08-26 and is here now: the
+ * instruction telling an agent to ask the person before spending. Andrew ruled
+ * against such an instruction on 2026-08-18, emphatic, reaffirmed 2026-08-19,
+ * on the grounds that the allowance the server enforces is what protects the
+ * person's money. He reversed that on 2026-08-26, after a coding agent ran one
+ * `pinloop judge` command over a hundred postings on his own account with
+ * nothing said to him first. A run that stays inside the allowance the whole way
+ * is never refused, so nothing told him anything had happened
+ * (specs/feature-judge-confirmation.md, AGREED 2026-08-26). CONFIRM_EXPLANATION
+ * below is that instruction, written once and put into all five of the sections
+ * whose commands now take two calls.
  *
  * The two numbers the "limits" section does state — how many requests an
  * account may make in a minute, and the most postings one command may pull —
@@ -202,6 +210,52 @@ export function staleSkillNotice(saved: number, newest: number): string {
 The copy you are holding is version ${saved}, and this Pinloop ships version ${newest}.
 Tell the person their saved Pinloop instruction file is being replaced, then run "pinloop skill" and save the text it prints over the old file.`;
 }
+
+/**
+ * The two-call pattern, written once and put into all five of the sections whose
+ * commands now take two calls: judge, routine run, routine put, schedule put and
+ * watch put (specs/feature-judge-confirmation.md, AGREED 2026-08-26).
+ *
+ * It is one block reused five times rather than five paragraphs saying the same
+ * thing, because five copies are five places that can quietly drift apart, and a
+ * coding agent reading only one section still has to learn the whole rule.
+ *
+ * It names no dollar figure and never uses the word Pinloop's own bookkeeping is
+ * counted in. Everything it states is a count of judgments, full or quick
+ * (Andrew, 2026-08-26).
+ */
+export const CONFIRM_EXPLANATION = `This command now takes two calls. The first call does nothing at all: it judges
+nothing, it stores nothing, it takes nothing out of this account's month, and it
+prints what the second call would do along with a token, which is a random piece
+of text. Only a second call carrying that same piece of text after --confirm does
+the work.
+
+The first call prints how many judgments the work would run, full or quick, and
+how many more of that same kind this account has left this month. For a schedule
+or a watch it prints the most one firing of the routine could possibly run
+instead, because nobody knows yet how many postings a future run will find.
+
+Put the choice to the person in one plain sentence before you run the second
+call. Say how much of the month confirming would use, in the count the first call
+printed. Say what a Pinloop judgment gives that reading the postings yourself
+does not: Pinloop follows its own worked-out instructions for reading a profile
+against a posting, and it keeps the model's written reasoning. A full judgment's
+verdict is saved for free reuse anytime that posting comes up again. A quick
+screen's verdict is saved too, and a later quick screen on the same posting
+reads it back for free, but a later full judgment ignores it and judges that
+posting again, taking more out of the month. Then say what the free way is,
+which is open to you as well:
+run "pinloop list", "pinloop fetch", "pinloop filter" and "pinloop profile get",
+read the same postings and the same profile without taking anything out of the
+month, form your own opinion, and store that opinion with "pinloop judgment put"
+if it is worth keeping, after which Pinloop counts that posting judged exactly as
+one it judged itself. Wait for the person to answer, then run the same command
+again with --confirm and the token.
+
+A token works once, for one hour, and only for the exact request that printed it.
+Naming a different posting, a different number of postings, the same ones in a
+different order, or a different number of hours between firings all mean the
+token no longer matches, and then the first call has to be run again.`;
 
 /**
  * One entry per command and per non-command part.
@@ -656,7 +710,9 @@ A run bigger than what is left of the month's usage judges as much as that
 covers and ends by naming how many postings it did not attempt and why; the same postings are
 listed in the machine-readable output with that reason on each one. A verdict
 read back rather than bought counts against nothing. Type "pinloop" on its own
-to read how much is left.`,
+to read how much is left.
+
+${CONFIRM_EXPLANATION}`,
 
   companies: `Finds employers by the words in their name, the one with the most postings first.
 It hands back employers rather than postings, and each line carries the employer
@@ -772,7 +828,14 @@ rather than the bare words, and a name of more than one word carries an
 underscore, as in "posted_after". An argument a command does not take is refused
 when the routine is stored, in a sentence naming the step, the argument and
 every argument that command does take, so a wrong name is found once rather than
-every night.`,
+every night.
+
+Storing a routine is stopped and asked about only when a schedule or a watch this
+account owns already fires that routine AND the version being stored holds a
+judge step. A routine nothing fires yet is stored on the first call, whatever is
+in it, because nothing can run it until something fires it.
+
+${CONFIRM_EXPLANATION}`,
 
   'routine get': `Shows one stored routine and the steps it holds, in order.`,
 
@@ -785,7 +848,13 @@ refusal names what is still pointing at it.`,
 produced. --within gives the first step a set of posting ids to work inside,
 either as ids or as JSON piped in. --json prints rows a following command can
 read. Every step's outcome is kept, so a run that stopped part way says which
-step stopped it.`,
+step stopped it.
+
+A run whose steps reach a judge step is stopped at that step the first time, the
+same way a typed "pinloop judge" is. A run of a routine with no judge step in it
+runs on the first call as it always has.
+
+${CONFIRM_EXPLANATION}`,
 
   'routine results': `Shows what the most recent run of one routine produced, read fresh from the corpus
 rather than from a copy taken at the time. --json prints rows a following command
@@ -800,7 +869,15 @@ keyboard. --routine names the routine and --every-hours is a whole number of
 hours from 1 to 168, both required. --first-due-at fixes when the first run
 happens, and the time of day it lands on is the time of day every later run lands
 on. Storing a schedule needs an account that pays for a subscription, and
-"pinloop upgrade" starts one. An account may hold 10 schedules.`,
+"pinloop upgrade" starts one. An account may hold 10 schedules.
+
+Storing a schedule whose routine reaches a judge step is stopped and asked about,
+because storing the row is the one moment somebody is at the keyboard before it
+starts firing on its own. Every such call is asked about, including one that
+changes nothing but the number of hours between firings. A schedule for a routine
+with no judge step in it is stored on the first call as it always has been.
+
+${CONFIRM_EXPLANATION}`,
 
   'schedule get': `Shows one schedule, when it next runs, and how its last run went.`,
 
@@ -816,7 +893,14 @@ be a search or a list, and is required. A watch has no cadence of its own; it
 looks about once an hour. Nothing arriving means nothing runs. Storing a watch
 needs an account that pays for a subscription, and "pinloop upgrade" starts one.
 An account may hold 10 watches. A routine whose last step adds to a tab is what
-fills a list of new finds overnight.`,
+fills a list of new finds overnight.
+
+Storing a watch whose routine reaches a judge step is stopped and asked about,
+because storing the row is the one moment somebody is at the keyboard before it
+starts looking every hour on its own. A watch for a routine with no judge step in
+it is stored on the first call as it always has been.
+
+${CONFIRM_EXPLANATION}`,
 
   'watch get': `Shows one watch, when it next looks, and how its last firing went, including how
 many postings had arrived and how many of them matched.`,
