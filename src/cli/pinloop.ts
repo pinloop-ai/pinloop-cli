@@ -524,6 +524,18 @@ function haveSavedLogin(): boolean {
  * Reads the saved pass, refusing a file that anyone other than its owner can
  * read or write. A pass is a key to the account; a key lying open on a shared
  * machine is not a key.
+ *
+ * That permission check is skipped on Windows, because Windows files do not
+ * carry the read/write/execute bits this check reads. Node has to return
+ * something for them anyway, so on Windows it reports 0666 for every file that
+ * is not marked read-only, no matter who is actually allowed to open it. The
+ * check would therefore refuse every saved login on every Windows machine, and
+ * the `chmod 0600` the refusal tells the person to run cannot change the number
+ * Node reports, so there would be no way out of it. What protects the file on
+ * Windows instead is the account's own profile folder, which Windows only lets
+ * that account and an administrator open. Three people reported this on the day
+ * the command was published; the fix and its reasoning are in docs/DECISIONS.md
+ * under 2026-09-06.
  */
 function readPass(): SavedPass {
   const file = credentialsFile();
@@ -531,7 +543,7 @@ function readPass(): SavedPass {
     throw new Failure(`no saved login at ${file}. Run \`pinloop login\` first.`);
   }
   const mode = statSync(file).mode & 0o777;
-  if ((mode & 0o077) !== 0) {
+  if (process.platform !== 'win32' && (mode & 0o077) !== 0) {
     throw new Failure(
       `refusing to use the saved login at ${file}: its file permissions are ` +
         `${mode.toString(8).padStart(4, '0')}, which lets other people on this machine read it. ` +

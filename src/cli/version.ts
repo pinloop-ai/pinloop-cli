@@ -30,4 +30,4 @@
  */
 
 /** The version this copy of the command is. Must equal package.json's `version`. */
-export const CLI_VERSION = '0.4.0';
+export const CLI_VERSION = '0.4.1';

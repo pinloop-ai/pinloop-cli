@@ -24,7 +24,7 @@
  * Printing for a person means a small group of lines at the bottom of the
  * screen that is erased and drawn again in place, so nothing scrolls past:
  *
- *   judging 12 postings, 4 at a time, anthropic/claude-sonnet-5
+ *   judging 12 postings, 4 at a time, openai/gpt-5.6-luna
  *   o 7f732227  thinking: comparing the Paris role against the location
  *   o a91c0d3e  answer 1,240 chars
  *   v 5 of 12 done   x 0 failed   0:48
@@ -76,7 +76,7 @@
  * and none of the model's thinking is written at all: a coding agent cannot do
  * anything with the thinking and has to store every line it is handed.
  *
- *   judging 12 postings with anthropic/claude-sonnet-5 via Anthropic
+ *   judging 12 postings with openai/gpt-5.6-luna via OpenAI
  *   verdict for 7f732227: no (5 of 12 done)
  *   call 1 of 3 done, 100 verdicts (100 of 300 done)
  *   call 2 of 3 failed: the model provider closed the connection

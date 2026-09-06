@@ -418,7 +418,7 @@ stored your 'background' document (389 bytes)
 
 $ pinloop search backend intern --posted-after 2026-07-01 --limit 3 --json | pinloop judge
 
-judging 3 postings with anthropic/claude-sonnet-5 via Anthropic
+judging 3 postings with openai/gpt-5.6-luna via OpenAI
 verdict for 44894d98: no (1 of 3 done)
 verdict for 154a6760: weak (2 of 3 done)
 verdict for 4f188c1e: strong (3 of 3 done)
@@ -427,7 +427,7 @@ verdict for 4f188c1e: strong (3 of 3 done)
 no constraints document is stored, so nothing could rule a posting out on its own
 no preferences document is stored, so the model judged these postings without being told what this person wants
 no resume is stored, so the model read no resume
-judged 3 postings with anthropic/claude-sonnet-5
+judged 3 postings with openai/gpt-5.6-luna
 weak  154a6760-e853-4a2f-bf25-5e1fc5d59fc7
 This is a 12-month fullstack internship requiring Vue.js frontend work plus Java/PHP backend, based in Vienna or Barcelona. Your background is backend-focused (Python/Postgres, Go) and you are explicitly looking for a summer 2027 backend or infrastructure internship, remote or in Europe.
 
