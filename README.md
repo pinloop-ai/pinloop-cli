@@ -15,7 +15,9 @@ against what it knows about you.
 
 ## Try it
 
-Paste this into your coding agent (Claude Code, Codex, Cursor, or similar):
+You don't run anything yourself. Paste this sentence into your coding agent
+(Claude Code, Codex, Cursor, or similar) and it installs Pinloop and walks you
+through setup:
 
 ```
 Run npm install -g pinloop, then run pinloop welcome and follow the instructions.
