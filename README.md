@@ -1,10 +1,25 @@
 # Pinloop CLI
 
+[![npm version](https://img.shields.io/npm/v/pinloop)](https://www.npmjs.com/package/pinloop)
+[![license: MIT](https://img.shields.io/npm/l/pinloop)](LICENSE)
+[![node >= 22](https://img.shields.io/node/v/pinloop)](https://nodejs.org)
+[![website](https://img.shields.io/badge/pinloop.ai-website-blue)](https://pinloop.ai)
+
 Pinloop is a job search tool built for your coding agent to run from a terminal.
 
 It holds a large collection of frequently updated job postings, can hold your
 resume and any other preferences, and calls AI models to evaluate postings
 against what it knows about you.
+
+![Pinloop judging postings against a resume in a terminal](demo.gif)
+
+## Try it
+
+Paste this into your coding agent (Claude Code, Codex, Cursor, or similar):
+
+```
+Run npm install -g pinloop, then run pinloop welcome and follow the instructions.
+```
 
 ## Install
 
@@ -33,7 +48,7 @@ account. Login goes through a browser, with no password.
 
 A free account gets a limited number of judged postings and semantic searches per
 month. You can use your own coding agent subscription of choice to instead have the
-agent judge postings and upload those judgments to Pinloop for free. 
+agent judge postings and upload those judgments to Pinloop for free.
 Run `pinloop upgrade` to raise the free plan's limits and gain access
 to scheduled routines and watches which run unattended to review postings even when
 your laptop is closed. Keyword search, filtering, saved lists of postings,
