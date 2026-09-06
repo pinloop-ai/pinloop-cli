@@ -36,8 +36,8 @@ month. You can use your own coding agent subscription of choice to instead have 
 agent judge postings and upload those judgments to Pinloop for free. 
 Run `pinloop upgrade` to raise the free plan's limits and gain access
 to scheduled routines and watches which run unattended to review postings even when
-your laptop is closed. Keyword search, filtering, saved lists of postings (tabs),
-stored profile documents (e.g., resume), and non-scheduled routines cost nothing.
+your laptop is closed. Keyword search, filtering, saved lists of postings,
+stored profile documents (e.g., resumes), and non-scheduled routines cost nothing.
 
 ## License
 
