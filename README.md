@@ -11,7 +11,7 @@ It holds a large collection of frequently updated job postings, can hold your
 resume and any other preferences, and calls AI models to evaluate postings
 against what it knows about you.
 
-![Pinloop judging postings against a resume in a terminal](demo.gif)
+https://github.com/user-attachments/assets/3657dcdc-4cac-4778-8cc6-5ca3b40e5fed
 
 ## Try it
 
