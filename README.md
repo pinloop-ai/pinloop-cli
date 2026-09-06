@@ -34,7 +34,7 @@ account. Login goes through a browser, with no password.
 A free account gets a limited number of judged postings and semantic searches per
 month. You can use your own coding agent subscription of choice to instead have the
 agent judge postings and upload those judgments to Pinloop for free. 
-Run `pinloop upgrade` raise the free plan's limits and gain access
+Run `pinloop upgrade` to raise the free plan's limits and gain access
 to scheduled routines and watches which run unattended to review postings even when
 your laptop is closed. Keyword search, filtering, saved lists, stored documents, 
 and non-scheduled routines cost nothing.
