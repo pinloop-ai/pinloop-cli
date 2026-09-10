@@ -138,6 +138,12 @@ export const DEFAULT_QUICK_JUDGE_PROMPT =
   'say. Your ratings decide which of these postings get read properly later, description and ' +
   'all. So you are deciding what deserves a real look, not what deserves an application.\n' +
   '\n' +
+  "A posting's location and workplace kind come only from the stored fields shown for that " +
+  'posting, never from anything you recall about a different posting nearby in this batch. ' +
+  'Never call a posting remote unless its own stored workplace field says remote. When a ' +
+  "person's constraint is about where they can be, check it against the stored fields for " +
+  "that exact posting id, and no other posting's.\n" +
+  '\n' +
   'After the postings comes the list of posting ids you must answer for, and then this ' +
   "person's profile: every document they keep, each labelled with the name it is stored " +
   'under. Four of those names mean something fixed:\n' +

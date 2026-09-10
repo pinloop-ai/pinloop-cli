@@ -89,7 +89,9 @@ import { dropReason } from '../shared/verdicts.ts';
 import { compareVersions, isVersion } from '../shared/version.ts';
 import {
   ADDRESS_INDENT,
+  FINISH_WITH_CODE_LINE,
   HANDOFF_TRADE_PATH,
+  LOGIN_CODE_ENV_VAR,
   NO_LOGIN_SAVED_LINE,
   OPEN_THIS_ADDRESS_LINE,
   PASSWORD_FLAGS_REFUSAL,
@@ -464,21 +466,37 @@ function passFromATypedCode(): Promise<DeliveredPass> {
 
 /**
  * Hands one short code to the server and takes back the pass parked under it.
+ * Throws, carrying the server's own reason, when the server refuses the code.
+ *
+ * Trading a code never proves which terminal asked for the sign-in page that
+ * showed it: the server's /auth/handoff/trade address takes whoever knows the
+ * eight characters, which is what lets `--code` and PINLOOP_LOGIN_CODE finish
+ * a sign-in from a process that never printed the address at all.
+ */
+async function exchangeCodeForPass(code: string): Promise<DeliveredPass> {
+  const { json } = await callServer(HANDOFF_TRADE_PATH, { method: 'POST', body: { code } });
+  if (typeof json?.access_token !== 'string' || json.access_token === '') {
+    throw new Failure('that code was taken but carried no pass. Try again.');
+  }
+  return {
+    secret: '',
+    access_token: json.access_token,
+    ...(typeof json.refresh_token === 'string' ? { refresh_token: json.refresh_token } : {}),
+    ...(typeof json.email === 'string' ? { email: json.email } : {}),
+  };
+}
+
+/**
+ * Hands one short code to the server and takes back the pass parked under it.
  * Hands back nothing at all when the server refuses the code, having said why.
+ *
+ * This is what the interactive fallback below calls: a code mistyped into a
+ * running `pinloop login` is said out loud and the wait goes on, rather than
+ * ending the command the way a code given as --code or PINLOOP_LOGIN_CODE does.
  */
 async function tradeTheShortCode(code: string): Promise<DeliveredPass | undefined> {
   try {
-    const { json } = await callServer(HANDOFF_TRADE_PATH, { method: 'POST', body: { code } });
-    if (typeof json?.access_token !== 'string' || json.access_token === '') {
-      process.stderr.write('that code was taken but carried no pass. Try again.\n');
-      return undefined;
-    }
-    return {
-      secret: '',
-      access_token: json.access_token,
-      ...(typeof json.refresh_token === 'string' ? { refresh_token: json.refresh_token } : {}),
-      ...(typeof json.email === 'string' ? { email: json.email } : {}),
-    };
+    return await exchangeCodeForPass(code);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return undefined;
@@ -980,7 +998,7 @@ function stoppedToAsk(json: unknown): boolean {
  * second time and still has to work when pasted on its own.
  */
 type ConfirmGate =
-  | { kind: 'judge'; ids: readonly string[]; quick: boolean }
+  | { kind: 'judge'; ids: readonly string[]; quick: boolean; again: boolean }
   | { kind: 'routine-run'; name: string; within?: string }
   | {
       kind: 'schedule-put';
@@ -1135,6 +1153,7 @@ function nextCommandLine(gate: ConfirmGate, token: string): string {
   switch (gate.kind) {
     case 'judge':
       words.push('judge', ...gate.ids.map(shellArg));
+      if (gate.again) words.push('--again');
       if (gate.quick) words.push('--quick');
       break;
     case 'routine-run':
@@ -1757,7 +1776,7 @@ function saySearchCoverage(report: Record<string, unknown>): void {
     report['coverage'],
     (fraction) =>
       `${fraction} postings that matched came back. ` +
-      `This search hands back the best ${ceiling} and no more.`,
+      `This search hands back the best ${ceiling} and no more, raise --top to see more.`,
   );
 }
 
@@ -2363,6 +2382,22 @@ export function buildProgram(): Command {
    * The address is printed even on a machine where the browser is opened, because
    * the person running this command is often a coding agent and the human does
    * the browser part on their own screen.
+   *
+   * `--code` (or the PINLOOP_LOGIN_CODE environment variable) finishes a
+   * sign-in with that same short code and nothing else: it never opens the
+   * small web server above, so it works in a process that never ran `pinloop
+   * login` and never saw the address this command printed. This is what a
+   * coding agent runs after a person has finished signing in in their own
+   * browser, because a coding agent has no prompt to paste a code into and,
+   * on Windows, no way to receive one over a named pipe either. The flag wins
+   * when both it and the environment variable are set.
+   *
+   * When neither is given and stdin is not a terminal — a coding agent's shell
+   * again — this command prints the address and one line naming the `--code`
+   * command to run next, then exits without waiting for anything: there is
+   * nobody at this terminal to paste a code into or to watch it time out. A
+   * real terminal, where a person can paste a code in by hand, keeps waiting
+   * exactly as it does today.
    */
   program
     .command('login')
@@ -2372,17 +2407,40 @@ export function buildProgram(): Command {
     // argument reader that `--email` is a word it does not know.
     .option('--email <email>', 'no longer taken: signing in happens in the browser')
     .option('--password <password>', 'no longer taken: Pinloop has no passwords')
-    .action(async (options: { email?: string; password?: string }) => {
+    .option(
+      '--code <code>',
+      'finish signing in with the short code the sign-in page showed, without waiting here',
+    )
+    .action(async (options: { email?: string; password?: string; code?: string }) => {
       if (options.email !== undefined || options.password !== undefined) {
         throw new Failure(PASSWORD_FLAGS_REFUSAL);
       }
 
+      const typedCode = options.code ?? process.env[LOGIN_CODE_ENV_VAR];
+      if (typedCode !== undefined && typedCode.trim() !== '') {
+        const pass = await exchangeCodeForPass(typedCode.trim());
+        savePass({
+          access_token: pass.access_token,
+          ...(pass.refresh_token !== undefined ? { refresh_token: pass.refresh_token } : {}),
+        });
+        process.stdout.write(`${loggedInLine(emailToPrint(pass))}\n`);
+        return;
+      }
+
       const waiting = await waitForBrowserSignIn();
       try {
-        process.stdout.write(
-          `${OPEN_THIS_ADDRESS_LINE}\n${ADDRESS_INDENT}${waiting.pageUrl}\n` +
-            `${PASTE_THE_CODE_LINE}\n`,
-        );
+        const addressLines = `${OPEN_THIS_ADDRESS_LINE}\n${ADDRESS_INDENT}${waiting.pageUrl}\n`;
+
+        // Nobody is at this terminal to paste a code into or to watch it give
+        // up after ten minutes, so nothing here waits: the address is printed,
+        // one line says what to run once the person has finished in their
+        // browser, and the command ends.
+        if (!process.stdin.isTTY) {
+          process.stdout.write(`${addressLines}${FINISH_WITH_CODE_LINE}\n`);
+          return;
+        }
+
+        process.stdout.write(`${addressLines}${PASTE_THE_CODE_LINE}\n`);
         openInBrowser(waiting.pageUrl);
 
         // Three things can end the wait: the browser hands the pass to the port
@@ -2634,6 +2692,11 @@ export function buildProgram(): Command {
       }
 
       if (options['json']) {
+        // A JSON caller never sees the interpretation sentence above, but it
+        // still needs to know when the ceiling cut its results short, so that
+        // line goes to standard error here exactly as it does for a person —
+        // standard output stays nothing but the JSON.
+        if (report && report['mode'] !== 'semantic') saySearchCoverage(report);
         const answer: Record<string, unknown> = { rows, cursor };
         if (report) answer['interpretation'] = report;
         printJson(answer);
@@ -3393,11 +3456,12 @@ function addJudgeCommands(program: Command): void {
       const wanted = await idsToJudge(ids);
       const keep = textOption(options['keep']);
       const quick = options['quick'] === true;
+      const again = options['again'] === true;
 
       const body: Record<string, unknown> = { ids: wanted };
       if (options['preview']) body['preview'] = true;
       if (keep !== undefined) body['keep'] = keep;
-      if (options['again']) body['again'] = true;
+      if (again) body['again'] = true;
       if (quick) body['quick'] = true;
       const confirming = textOption(options['confirm']);
       if (confirming !== undefined) body['confirm'] = confirming;
@@ -3435,7 +3499,7 @@ function addJudgeCommands(program: Command): void {
       // printed is what the second call would do plus the token that confirms it
       // (specs/feature-judge-confirmation.md, AGREED 2026-08-26).
       if (stoppedToAsk(json)) {
-        reportConfirmation(json, options['json'] === true, { kind: 'judge', ids: wanted, quick });
+        reportConfirmation(json, options['json'] === true, { kind: 'judge', ids: wanted, quick, again });
         return;
       }
       const rows = rowsOf(json);

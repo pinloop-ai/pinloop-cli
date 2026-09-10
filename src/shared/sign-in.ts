@@ -179,6 +179,29 @@ export const ADDRESS_INDENT = '  ';
  */
 export const PASTE_THE_CODE_LINE = 'if the page shows you a code, paste it here:';
 
+/**
+ * The line printed under the address instead of PASTE_THE_CODE_LINE, when
+ * `pinloop login` is run with stdin that is not a terminal.
+ *
+ * A coding agent running the command cannot type into the prompt
+ * PASTE_THE_CODE_LINE opens, so nothing is opened at all: the command prints
+ * this line and exits, and the person finishes signing in later with
+ * `pinloop login --code`, which takes the same short code the page would have
+ * had them paste in.
+ */
+export const FINISH_WITH_CODE_LINE = 'then run: pinloop login --code XXXX-XXXX';
+
+/**
+ * The environment variable `pinloop login --code` reads when the flag itself
+ * is absent. The flag wins when both are set.
+ *
+ * It exists for the same reason `--code` does: a coding agent finishing a
+ * sign-in a person completed in their own browser has nowhere to paste a code
+ * into, and a command-line flag or an environment variable are the two ways an
+ * agent can hand a value to a process it starts.
+ */
+export const LOGIN_CODE_ENV_VAR = 'PINLOOP_LOGIN_CODE';
+
 /** The one line printed when nothing was delivered inside WAIT_FOR_SIGN_IN_MS. */
 export const GAVE_UP_LINE =
   'the sign-in did not finish within 10 minutes. Run "pinloop login" to try again.';
