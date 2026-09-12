@@ -1,15 +1,28 @@
-# Pinloop CLI
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/pinloop-wordmark-dark.svg">
+    <img src="assets/pinloop-wordmark.svg" width="450" alt="Pinloop">
+  </picture>
+</p>
 
-[![npm version](https://img.shields.io/npm/v/pinloop)](https://www.npmjs.com/package/pinloop)
-[![license: MIT](https://img.shields.io/npm/l/pinloop)](LICENSE)
-[![node >= 22](https://img.shields.io/node/v/pinloop)](https://nodejs.org)
-[![website](https://img.shields.io/badge/pinloop.ai-website-blue)](https://pinloop.ai)
+<p align="center">
+  <a href="https://www.npmjs.com/package/pinloop"><img alt="npm version" src="https://img.shields.io/npm/v/pinloop?label=npm&labelColor=2A2B30&color=5D5E66"></a>
+  <a href="LICENSE"><img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-5D5E66?labelColor=2A2B30"></a>
+  <a href="https://pinloop.ai"><img alt="pinloop.ai website" src="https://img.shields.io/badge/pinloop.ai-website-5D5E66?labelColor=2A2B30"></a>
+  <a href="https://pinloop.ai/discord"><img alt="Discord community" src="https://img.shields.io/badge/discord-join-5D5E66?labelColor=2A2B30"></a>
+</p>
 
-Pinloop is a job search tool built for your coding agent to run from a terminal.
+<p align="center">
+  Pinloop is a job search tool built for your coding agent to run from a terminal.
+</p>
 
-It holds a large collection of frequently updated job postings, can hold your
-resume and any other preferences, and calls AI models to evaluate postings
-against what it knows about you.
+<p align="center">
+  It holds a large collection of frequently updated job postings, can hold your<br>
+  resume and any other preferences, and calls AI models to evaluate postings<br>
+  against what it knows about you.
+</p>
+
+<br>
 
 https://github.com/user-attachments/assets/3657dcdc-4cac-4778-8cc6-5ca3b40e5fed
 
@@ -65,5 +78,6 @@ The license covers the CLI only.
 ## Links
 
 - Home: https://pinloop.ai
+- Discord: https://pinloop.ai/discord
 - Privacy: https://pinloop.ai/privacy
 - Terms: https://pinloop.ai/terms
