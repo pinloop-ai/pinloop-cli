@@ -202,6 +202,9 @@ If something is wrong or you want to ask for anything, I can run pinloop
 message to tell Andrew about it (he builds Pinloop). He'd love to get your
 feedback, and you'll get his response straight through this CLI.
 
+Join the Discord to talk to Andrew (who builds Pinloop) and other users
+directly: https://pinloop.ai/discord
+
 I've read the full instructions for Pinloop, so if you want to explore anything
 further, just say so and we'll go deeper."
 
