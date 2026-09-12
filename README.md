@@ -9,7 +9,10 @@
   <a href="https://www.npmjs.com/package/pinloop"><img alt="npm version" src="https://img.shields.io/npm/v/pinloop?label=npm&labelColor=2A2B30&color=5D5E66"></a>
   <a href="LICENSE"><img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-5D5E66?labelColor=2A2B30"></a>
   <a href="https://pinloop.ai"><img alt="pinloop.ai website" src="https://img.shields.io/badge/pinloop.ai-website-5D5E66?labelColor=2A2B30"></a>
-  <a href="https://pinloop.ai/discord"><img alt="Discord community" src="https://img.shields.io/badge/discord-join-5D5E66?labelColor=2A2B30"></a>
+</p>
+
+<p align="center">
+  <a href="https://pinloop.ai/discord"><img alt="Join our Discord" src="https://img.shields.io/badge/Discord-Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
 </p>
 
 <p align="center">
