@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pinloop.ai/discord"><img alt="Join our Discord" src="https://img.shields.io/badge/Discord-Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  <a href="https://pinloop.ai/discord"><img alt="Join our Discord" src="https://img.shields.io/badge/Discord-Join%20the%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
 </p>
 
 <p align="center">
