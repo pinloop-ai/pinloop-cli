@@ -2294,6 +2294,9 @@ export function buildProgram(): Command {
     // Andrew changes changes what this already-installed copy prints.
     lines.push(...allowanceLines(json?.allowances));
     lines.push('');
+    lines.push(
+      'Join the Discord to talk to Andrew (who builds Pinloop) and other users directly: https://pinloop.ai/discord',
+    );
     lines.push('Ask your coding agent to run `pinloop guide` and read all of it.');
 
     process.stdout.write(`${lines.join('\n')}\n`);
@@ -3094,6 +3097,11 @@ export function buildProgram(): Command {
   addScheduleCommands(program);
   addWatchCommands(program);
   addTabCommands(program);
+
+  program.addHelpText(
+    'after',
+    '\nJoin the Discord to talk to Andrew (who builds Pinloop) and other users directly: https://pinloop.ai/discord',
+  );
 
   return program;
 }
