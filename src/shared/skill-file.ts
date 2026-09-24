@@ -60,7 +60,7 @@
  */
 
 /** The version of the text below. Raised by hand when the text changes. */
-export const SKILL_VERSION = 6;
+export const SKILL_VERSION = 7;
 
 /**
  * The text `pinloop skill` prints and an agent saves.
@@ -70,8 +70,8 @@ export const SKILL_VERSION = 6;
  */
 export const SKILL_TEXT = `Pinloop searches job postings from a terminal.
 
-Pinloop holds a large collection of real job postings, and it grows when
-somebody goes out and collects new ones through Pinloop. It can also store plain text documents (.md, .txt) and the
+Pinloop holds a large collection of real job postings. Running a pull brings in
+new ones. It can also store plain text documents (.md, .txt) and the
 user's PDF resume. It can use these to make AI calls which judge job postings
 for the user, but this can also serve as an organized store of information to
 help you, the coding agent, assist the user with their job search.

@@ -394,8 +394,8 @@ You are the one who types these commands. The person you are working with talks
 to you, and you run the commands and read the answers back to them.
 
 What changed in this version. Postings no longer arrive in Pinloop on their own
-once an hour. A posting is in Pinloop because somebody ran "pinloop pull", or
-because a schedule or a watch of theirs ran one. Two commands came with that
+once an hour. Run "pinloop pull" to collect them, or set up a schedule or a
+watch that runs a pull automatically. Two commands came with that
 change: "pinloop count" says how many postings match a set of conditions and
 hands none of them over, which takes nothing out of the account, and "pinloop
 pull" goes out and collects them. If you are reading this after updating from an
@@ -405,9 +405,7 @@ There are two ways to reach a job posting, and the difference between them
 decides what a command takes out of the account. "pinloop search" looks through
 the postings Pinloop has already collected and hands back a page of them.
 "pinloop pull" is Pinloop going out to collect right now, so it can bring back
-postings Pinloop has never held. Nothing collects on a timer any more: a posting
-is in Pinloop because somebody ran a pull, or because a schedule or a watch of
-theirs ran one.
+postings Pinloop has never held.
 
 Every account has a number of job postings it may be handed. A posting counts the
 first time it reaches this account, in any form, and from then on it belongs to
@@ -1350,7 +1348,7 @@ watch has no cadence you set: it looks every six hours.
 
 Read the routine above carefully before copying it, because its first step is a
 search. A watch on a search-first routine collects nothing of its own. It can
-only ever see postings some pull has already brought into Pinloop, and every line
+only ever see postings already in Pinloop, and every line
 Pinloop prints about such a watch carries a sentence saying so. To have the watch
 go out and collect, store the routine again with a pull as its first step, and
 leave --posted-after off that step: the watch sets that day itself, to the day of
@@ -1470,7 +1468,7 @@ cancellation.`,
 
   search: `Looks through the postings Pinloop has already collected and hands back a page of
 them. It never goes out to collect anything, so the only postings it can find are
-postings some pull has already brought in. When a search turns up less than the
+postings already in Pinloop. When a search turns up less than the
 person hoped for, "pinloop pull" is what goes and gets more.
 
 The words are optional. With words, whole words are matched, widened by plural
@@ -2019,8 +2017,8 @@ postings Pinloop first saw after the last look, so a job the employer re-posted
 last night is never announced as new.
 
 A watch whose routine starts with a search collects nothing at all. It can only
-ever see postings some pull has already brought into Pinloop, so on a stretch
-where nobody pulled anything it finds nothing, and every line Pinloop prints
+ever see postings already in Pinloop, so a stretch when nothing new showed up
+there finds nothing, and every line Pinloop prints
 about such a watch carries one sentence saying so and naming what to store
 instead. Nothing arrives in Pinloop on its own any more, so this is the mistake
 worth checking for: if the person asked to be told about new postings, the
