@@ -109,3 +109,53 @@ export const MARKET_COUNTS_PER_DAY = 50;
  * rule that every account, paying or not, got the same fifty.
  */
 export const PAID_MARKET_COUNTS_PER_DAY = 200;
+
+/**
+ * How many applications Pinloop fills in one month for an account on the free
+ * plan: 10. The free plan was first given 6 when slice 1 of the stage-one fill
+ * server was approved on 2026-09-23, and Andrew raised it to 10 the same day,
+ * in the ruling that also set how many minutes of live view each plan has.
+ *
+ * Each filled application runs one small cloud desktop and one run of the model
+ * that reads the form and fills it, which together cost under a cent (about
+ * 0.7 cents in the 2026-09-23 estimate, two minutes of review included). The
+ * count is taken when the person applies, before any of that is spent, and is
+ * handed back when Pinloop could not finish the form. It is counted on the same
+ * month as judged postings: the calendar month for the free plan, and the two
+ * days Stripe charged on for Pro.
+ */
+export const FREE_FILLS_PER_MONTH = 10;
+
+/**
+ * How many applications Pinloop fills in one month for an account on Pro: 100,
+ * unchanged by Andrew's 2026-09-23 ruling on the monthly plan limits.
+ */
+export const PAID_FILLS_PER_MONTH = 100;
+
+/**
+ * How many seconds of live view one account on the free plan has in one month:
+ * 1800 seconds, which is 30 minutes. Slice 2 of the stage-one server, review
+ * and submit, was approved on 2026-09-23 with 120 minutes on every plan, and
+ * Andrew's ruling later that day set the free plan to 30 minutes and Pro to
+ * 300.
+ *
+ * Live view is watching and using an application's own cloud desktop in the
+ * browser. While an application that is Ready for you is open, the live-view
+ * page checks in every 30 seconds, and each check-in counts 30 seconds whether
+ * or not the mouse or keyboard was used, so a script cannot keep a desktop
+ * awake for free. Watching a form while Pinloop is still filling it counts
+ * nothing, because the desktop is running for the fill anyway. It is counted
+ * on the same month as filled applications: the calendar month on the free
+ * plan, and the two days Stripe charged on for Pro. It is stored in seconds and
+ * shown to people as minutes.
+ */
+export const FREE_LIVE_VIEW_SECONDS_PER_MONTH = 1_800;
+
+/**
+ * How many seconds of live view one account on Pro has in one month: 18000
+ * seconds, which is 300 minutes (Andrew's ruling, 2026-09-23). The sentences a
+ * person reads when the month's live view is used up are written from these two
+ * numbers, one sentence for the free plan and one for Pro, so changing either
+ * number changes the number in those sentences and nothing else.
+ */
+export const PAID_LIVE_VIEW_SECONDS_PER_MONTH = 18_000;
