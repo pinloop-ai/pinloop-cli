@@ -535,17 +535,28 @@ export function tooManyCountsRefusal(limit: number, offer?: ProOffer): string {
  * The one line `pinloop count --from ...` prints: how many postings exist
  * in the window it asked over, and which window that was.
  *
- * This is the line for a count that was pointed at one of the two places a
- * posting comes from. A count that named no place counts both and prints the
- * line below instead.
+ * A count that named no place counts the career sites only and prints this
+ * same line, followed by the sentence below (Andrew, 2026-09-26).
  */
 export function marketCountLine(matching: number, window: PullWindow): string {
   return `${withCommas(matching)} match ${countWindowInWords(window)}.`;
 }
 
 /**
- * The one line `pinloop count` prints when nobody said which of the two
- * places to count (Andrew, 2026-09-13).
+ * The sentence `pinloop count` adds after the number when nobody said which of
+ * the two places to count (cutting fantastic.jobs requests, Andrew, 2026-09-26,
+ * decision 1). Such a count asks the career sites only, one request rather than
+ * two, and this says so and says how to count the job boards.
+ */
+export function jobBoardsNotCountedSentence(): string {
+  return 'Job boards were not counted; add --from "job boards" to count them.';
+}
+
+/**
+ * The one line `pinloop count` printed when nobody said which of the two
+ * places to count (Andrew, 2026-09-13), from a server that still asked both.
+ * Kept so that this copy of the command still reads such a server's answer; a
+ * server from 2026-09-26 on answers one number instead.
  *
  * A posting is either on an employer's own hiring page or on a job board, never
  * both, so the two numbers are separate questions and neither one on its own is

@@ -60,7 +60,7 @@
  */
 
 /** The version of the text below. Raised by hand when the text changes. */
-export const SKILL_VERSION = 7;
+export const SKILL_VERSION = 8;
 
 /**
  * The text `pinloop skill` prints and an agent saves.
@@ -91,8 +91,7 @@ ones on the job boards, in every country, so there are millions of them. When a
 result looks thin, the query is wrong before Pinloop is. Asking how many postings
 match a set of conditions hands none of them over and takes nothing out of the
 number of job postings the person's account may be handed, and collecting
-postings does take from it, so narrow the query with counts, try several shapes
-of it, and collect once.
+postings does take from it, so narrow the query with counts and collect once.
 
 Pinloop has limits on how many job postings a person can be handed, how many can
 be judged, and how often you can go out and collect. When a command prints a

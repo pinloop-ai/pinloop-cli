@@ -100,15 +100,19 @@ export const PULL_CEILING = 5_000;
  *
  * A paying account gets a higher number, PAID_MARKET_COUNTS_PER_DAY below
  * (Andrew's ruling, 2026-09-14).
+ *
+ * Cut from 50 to 10 on 2026-09-26 (Andrew: cutting fantastic.jobs requests,
+ * decision 2), because every count is a request against the month's allowance.
  */
-export const MARKET_COUNTS_PER_DAY = 50;
+export const MARKET_COUNTS_PER_DAY = 10;
 
 /**
  * How many times one account with a live paid subscription may ask how many
  * postings exist, in one day. Set by Andrew 2026-09-14, replacing the earlier
- * rule that every account, paying or not, got the same fifty.
+ * rule that every account, paying or not, got the same fifty, and cut from 200
+ * to 50 on 2026-09-26 (cutting fantastic.jobs requests, decision 2).
  */
-export const PAID_MARKET_COUNTS_PER_DAY = 200;
+export const PAID_MARKET_COUNTS_PER_DAY = 50;
 
 /**
  * How many applications Pinloop fills in one month for an account on the free

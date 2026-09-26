@@ -535,8 +535,9 @@ anything.
 conditions leave something out.
 
 3. Count it with "pinloop count". A count hands over no posting and takes
-nothing out of this account's postings. Leave --from off and it counts both
-places a posting can come from and prints both numbers.
+nothing out of this account's postings. With no --from it counts the career
+sites, employers' own hiring pages, and nothing else. Add --from "job boards" to
+count the job boards instead, and only when the person wants them.
 
 4. Read the number against what that kind of work in that place really has. A
 number far below what you would expect means the query is throwing postings
@@ -546,10 +547,10 @@ to report.
 
 5. Change one thing and count again. Try a different category, a different band
 of years of experience, the words dropped entirely, the words moved onto the
-title with --in title, the other place with --from. Try three or four shapes
-before you settle on one. A free account may run ${MARKET_COUNTS_PER_DAY} of these counts a day,
-and an account with a paid subscription may run ${PAID_MARKET_COUNTS_PER_DAY}, so a few tries leave
-plenty for the rest of the day.
+title with --in title. Try one or two shapes before you settle on one, and no
+more, because every count is a request and the day's counts run out. A free
+account may run ${MARKET_COUNTS_PER_DAY} of these counts a day, and an account with a paid subscription
+may run ${PAID_MARKET_COUNTS_PER_DAY}.
 
 6. Only when the count says what the person asked for, run "pinloop pull", once.
 
@@ -560,8 +561,8 @@ where you stopped.
 
 WHAT YOU SAY TO THE PERSON, AND WHAT YOU KEEP TO YOURSELF
 
-Never tell a person Pinloop has little for them until you have tried several
-shapes of the query yourself. A first count is a step in your own working out. A
+Never tell a person Pinloop has little for them until you have tried more than
+one shape of the query yourself. A first count is a step in your own working out. A
 person handed that first number as the answer walks away believing something
 untrue about what is there for them. When you do give them a number, say what
 you counted in their own words: "there are 4,200 customer service jobs in the
@@ -585,15 +586,22 @@ first pull you run for anybody.`,
   // their own. The heading line the approved text carried, WORKED EXAMPLES OF
   // THE LOOP, is the section heading in PART_HEADINGS rather than a line of the
   // body, so the part prints under one heading rather than two. Every other
-  // sentence is Andrew's approved text of 2026-09-14, word for word.
+  // sentence is Andrew's approved text of 2026-09-14, word for word, except
+  // where a count used to report two numbers. On 2026-09-26 a count with no
+  // --from stopped counting the job boards (cutting fantastic.jobs requests,
+  // decision 1), so each count now reports its career-site number, the job
+  // boards are counted only where an example needs them, and the old budget of
+  // roughly ten counts per example is gone (decision 9).
   'worked-examples': `Four requests, each followed by the working a thorough agent does before it
 spends a posting, and then the few sentences it says to the person. The
 working is the part to copy. In every one of them the first count is a
-question rather than an answer, the whole working fits inside about ten
-counts because an account may only run so many a day, and the pull comes
-last and runs once. The numbers are what the agent saw in that one example
-and nothing more; none of them is a fact about the world, and the agent never
-says one as if it were.
+question rather than an answer, the working uses as few counts as will
+answer the question because an account may only run so many a day, and the
+pull comes last and runs once. The numbers are what the agent saw in that one
+example and nothing more; none of them is a fact about the world, and the
+agent never says one as if it were. A count that names no --from counts the
+career sites only, so every number below is a career-site number unless the
+count names --from "job boards".
 
 Two things all four lean on. First, every label a posting carries, its
 category, its kind of employment, its years of experience, was put there by a
@@ -639,8 +647,7 @@ misses internships whenever the posting does not call itself one in a way the
 reading recognised. So the agent does not count the label once and move on.
 It counts the shapes an internship takes in this field, but it packs the
 shapes into as few counts as they fit, because an account has a fixed number
-of counts a day and the whole job, employers included, should fit in about
-ten.
+of counts a day.
 
 Every count below carries --category Software --country "United States"
 unless it says otherwise. Words joined with OR inside one --in title value
@@ -648,26 +655,26 @@ count as one query, so a dozen names for the same thing cost one count, and
 two bracketed groups joined with AND still cost one count.
 
 Count one, the label, to learn the size of the labelled field: --employment
-INTERN, no words. It sees 610 from career sites and 640 from job boards.
+INTERN, no words. It sees 610.
 
 Count two, the names an internship goes by, in the title, with no employment
 label at all: --in title "intern OR internship OR co-op OR coop OR summer
 2027 OR class of 2027". Title-only counts reach back six months rather than
 one, and internships for a summer are posted the previous autumn, so this one
-carries --posted-after set to six months ago. It sees 1,180 and 1,320. That
+carries --posted-after set to six months ago. It sees 1,180. That
 is roughly twice what the label alone admits, and every posting in it says
 in its own title that it is an internship.
 
 Count three, the same title words with --employment INTERN added back. It
-sees 590 and 640. The difference between counts two and three, about 600 and
-700, is the number of internships the label would throw away. That is what
+sees 590. The difference between counts two and three, about 600, is the
+number of internships the label would throw away. That is what
 decides that the pull will not carry --employment INTERN.
 
 Count four, the person's two things joined, with the Software category taken
 off and software words put in the title in its place: --in title "(intern OR
 internship OR co-op OR coop OR summer 2027 OR class of 2027) AND (software
-OR engineer OR engineering OR developer OR SWE)", no category. It sees 1,610
-and 1,790. That is more than count two, by about 430 and 470, and the extra
+OR engineer OR engineering OR developer OR SWE)", no category. It sees 1,610.
+That is more than count two, by about 430, and the extra
 is software engineering internships the reading filed under Technology,
 Engineering, Data & Analytics or a bank's Finance & Accounting, which the
 Software label alone would have thrown away. Some of count two is missing
@@ -681,8 +688,8 @@ five-posting pull cannot spend one of its five on a marketing intern.
 
 Count five, the internships hiding behind plain titles: the word internship
 in the body rather than the title, with --posted-after set to a month ago
-because counts by words in the body reach back one month. It sees 140 and
-180 over the month that the title-word count sees 260 and 300 over. About a
+because counts by words in the body reach back one month. It sees 140 over
+the month that the title-word count sees 260 over. About a
 third of last month's internships would be missed by a title-only pull. That
 is worth knowing and worth telling the person, and it is not worth a pull of
 its own on a five-posting day.
@@ -691,17 +698,17 @@ Count six, the neighbours the person did not ask for, so they can be told the
 pool exists: --in title "(new grad OR new graduate OR early career OR entry
 level OR graduate program OR rotational program OR apprentice OR campus) AND
 (software OR engineer OR engineering OR developer OR SWE)", no category. It
-sees 540 and 610. One clause in what the agent says, nothing more.
+sees 540. One clause in what the agent says, nothing more.
 
 Count seven, the employers, with the internship words only: the hundred
 names written down at the start, all on --company at once, with the title
 words of count two, --posted-after six months ago, no category and no
-employment label. It sees 310 and 420. That is every internship of any kind
+employment label. It sees 310. That is every internship of any kind
 at those hundred employers, and it is the number that shows the hole the
 next count closes.
 
 Count eight, the same hundred names with the title value of count four, both
-groups joined with AND. It sees 170 and 230. So nearly half of what big tech
+groups joined with AND. It sees 170. So nearly half of what big tech
 posts as internships is finance, marketing, legal, design and hardware work
 rather than software engineering, and a pull built on count seven would have
 spent two of its five on those. This is the number the person hears.
@@ -727,7 +734,7 @@ reported as a miss rather than shown as a fit.
 
 What the agent says, before the pull: "Pinloop has about 170 software
 engineering internships from the last six months on the careers pages of
-about a hundred big tech companies, and about 230 more on job boards. I'm
+about a hundred big tech companies; I haven't counted the job boards yet. I'm
 taking big tech to mean the well-known dozen plus the chip, cloud,
 enterprise software, payments, streaming and hardware companies of that
 size; say so if you want the list or want names added. Want five from the
@@ -757,41 +764,40 @@ carry --posted-after set to six months ago, because a count on title words
 reaches back that far.
 
 Count one, the labels, to learn the size of the labelled field: --category
-Legal --employment FULL_TIME, no words. It sees 480 from career sites and
-1,300 from job boards. Legal holds lawyers, clerks, compliance officers and
+Legal --employment FULL_TIME, no words. It sees 480. Legal holds lawyers, clerks, compliance officers and
 legal assistants, so that number says little about paralegal jobs, and
 nothing about the ones filed elsewhere.
 
 Count two, the person's own word, in the title, with no category and no
-employment label: --in title paralegal. It sees 520 and 1,400. Every posting
+employment label: --in title paralegal. It sees 520. Every posting
 in it calls itself a paralegal job in its own title.
 
 Count three, the names the work goes by: --in title "paralegal OR legal
-assistant OR law clerk OR litigation assistant". It sees 1,450 and 3,900.
+assistant OR law clerk OR litigation assistant". It sees 1,450.
 That is the pool, nearly three times the person's own word, and the three
 added titles are the reason the choice gets said to the person: legal
 assistant in particular is a wider job than paralegal, and some of those
 postings will be filing and reception work.
 
 Count four, the title words of count three with --category Legal added back.
-It sees 1,090 and 2,950. The difference from count three, about 360 and 950,
-is paralegal-shaped postings the reading filed under some other category. A
+It sees 1,090. The difference from count three, about 360, is
+paralegal-shaped postings the reading filed under some other category. A
 pull carrying --category Legal would throw a quarter of the pool away, which
 decides that the pull carries no category.
 
 Count five, where the quarter went: the same title words with --category
-Administrative. It sees 290 and 780. That is most of the gap; the rest is
+Administrative. It sees 290. That is most of the gap; the rest is
 spread thin across Government & Public Sector, Finance & Accounting and Human
 Resources. A paralegal posting whose text is mostly about scheduling, filing
 and correspondence reads as administrative work to the reading that labels
 it, and it is still a paralegal job.
 
 Count six, the employment label: the title words of count three with
---employment FULL_TIME, no category. It sees 900 and 2,400. So 550 and 1,500
-of the pool carry some other employment label or none.
+--employment FULL_TIME, no category. It sees 900. So 550 of the pool carry
+some other employment label or none.
 
 Count seven, how much of that is really part time: the same with --employment
-PART_TIME. It sees 130 and 380. So most of what the FULL_TIME label loses is
+PART_TIME. It sees 130. So most of what the FULL_TIME label loses is
 labelled CONTRACTOR or TEMPORARY, or carries no label at all. In this field a
 contract is often full-time hours on a fixed term, and temporary often means
 a leave cover or a contract that becomes permanent, so a pull carrying
@@ -803,8 +809,8 @@ almost always says so in its title.
 Count eight, the postings whose title says legal assistant but whose text
 says paralegal: the word paralegal in the body rather than the title, with
 --posted-after set to a month ago because a count on body words reaches back
-one month. It sees 610 and 1,700 over that one month, against the 520 and
-1,400 that carry paralegal in the title over six months. A month of body
+one month. It sees 610 over that one month, against the 520 that carry
+paralegal in the title over six months. A month of body
 mentions outnumbers six months of title mentions, because lawyer postings say
 "works with paralegals", legal assistant postings say "paralegal experience
 an asset", and law firm reception postings mention the paralegal team. That
@@ -820,16 +826,16 @@ loses and the two extra counts only say where it went.
 The pull is built from what the counts taught: --in title "paralegal OR legal
 assistant OR law clerk OR litigation assistant" --country Canada --from
 "career sites" --posted-after six months ago, no category, no employment
-label, --limit 5. Career sites first because those postings come straight
-from the employer's own hiring page; the job boards hold nearly three times
-as many, and that is said so the person can ask for them. The agent reads
+label, --limit 5. Career sites because those postings come straight from the
+employer's own hiring page, and they are what the counts measured; the job
+boards were not counted, and that is said so the person can ask for them. The agent reads
 every title before showing it, and one that says part time, casual or student
 is reported as a miss rather than shown as a fit.
 
 What the agent says, before the pull: "Pinloop has about 1,450 paralegal,
 law clerk, legal assistant and litigation assistant postings in Canada on
-employers' own careers pages from the last six months, and about 3,900 on
-job boards. I counted all four titles because the same work is posted under
+employers' own careers pages from the last six months; I haven't counted the
+job boards yet. I counted all four titles because the same work is posted under
 each of them; say so if you want your own title only. Want five from the
 careers pages?"
 
@@ -860,15 +866,14 @@ set to six months ago.
 
 Count one, the field, to learn what the title words catch across the whole
 country: --category Healthcare --in title "registered nurse OR RN OR staff
-nurse OR clinical nurse". It sees 48,000 from career sites and 95,000 from
-job boards. Nursing is posted in numbers that large, so any Chicago answer is
+nurse OR clinical nurse". It sees 48,000. Nursing is posted in numbers that large, so any Chicago answer is
 a small slice of it, and a Chicago count in the low hundreds is a query to
 fix rather than an answer to report.
 
 Count two, what the two letters RN add: the same without RN, --category
 Healthcare --in title "registered nurse OR staff nurse OR clinical nurse". It
-sees 19,000 and 38,000. So RN alone accounts for 29,000 and 57,000, and that
-number is two things mixed. Most of it is titles written "RN, Med Surg" or
+sees 19,000. So RN alone accounts for 29,000, and that number is two things
+mixed. Most of it is titles written "RN, Med Surg" or
 "RN - ICU Nights" that never spell out registered nurse, which is how nursing
 titles are usually written. Some of it is titles that merely contain those
 two letters inside another word: Overnight, Intern, PRN, Journey. RN stays in
@@ -876,23 +881,22 @@ the title words because it catches most of the pool, and every title is read
 before it is shown.
 
 Count three, the category off: the title words of count one with no category.
-It sees 52,000 and 104,000. The gap, about 4,000 and 9,000, is nurse postings
+It sees 52,000. The gap, about 4,000, is nurse postings
 filed under Education, Government & Public Sector or Social Services, under a
 tenth of the pool. Keeping --category Healthcare loses that tenth and in
 return drops every title outside healthcare that only contains the letters
 RN, like an overnight security officer, so the pull keeps the category.
 
 Count four, the employment label: the title words of count one, --category
-Healthcare, --employment FULL_TIME. It sees 30,000 and 61,000. Count five, the
-same with --employment PART_TIME, sees 6,000 and 12,000. So about 12,000 and
-22,000 carry neither label: per diem, PRN, travel and contract nursing, and
+Healthcare, --employment FULL_TIME. It sees 30,000. Count five, the same with
+--employment PART_TIME, sees 6,000. So about 12,000 carry neither label: per diem, PRN, travel and contract nursing, and
 postings the reading left unlabelled. The person said nothing about hours, so
 the pull carries no employment label, and hours are read off the title, where
 nursing postings almost always write them.
 
 Count six, the city as a word: Chicago on its own with no --in title,
 --category Healthcare, --posted-after set to a month ago because a count on
-body words reaches back one month. It sees 2,100 and 4,600. That is every
+body words reaches back one month. It sees 2,100. That is every
 healthcare posting in the country from the last month that mentions Chicago
 anywhere: nurses among medical assistants, therapists and technicians, some
 of them in the suburbs and some of them nowhere near the city. It cannot be
@@ -906,22 +910,19 @@ Sinai, Ascension, UI Health — is tried as written rather than looked up first.
 About fifteen names survive that, and --company takes all of them at once, so
 one count covers the whole list: the title words of count one, --category
 Healthcare, --posted-after six months ago, and every name on --company. It
-sees 1,900 and 900. Those are registered nurse postings at employers whose
-hospitals are in the city, which is closer to what was asked than a word
-match, and the job boards hold fewer of them than the career sites because
-hospital systems post on their own pages first.
+sees 1,900. Those are registered nurse postings at employers whose hospitals
+are in the city, which is closer to what was asked than a word match.
 
 Count eight, how the two routes overlap: the same fifteen names on --company
 with Chicago as a body word instead of the title words, --category
-Healthcare, --posted-after a month ago. It sees 1,300 and 520, against count
-six's 2,100 and 4,600 over the same month. So on career sites the fifteen
-systems account for most of everything healthcare that mentions Chicago, and
-what they do not account for is smaller employers, clinics and nursing homes,
-and out-of-town postings that merely name the city. On job boards they
-account for about a tenth, because the boards' Chicago nursing postings come
-mostly from staffing and travel nurse agencies. That decides that the pull
-goes through the employers and comes from career sites, and that the agencies
-get one clause in what the agent says.
+Healthcare, --posted-after a month ago. It sees 1,300, against count six's
+2,100 over the same month. So the fifteen systems account for most of
+everything healthcare on career sites that mentions Chicago, and what they do
+not account for is smaller employers, clinics and nursing homes, and
+out-of-town postings that merely name the city. That decides that the pull
+goes through the employers and comes from career sites. The job boards were
+not counted, because hospital systems post on their own pages first; they get
+one clause in what the agent says, so the person can ask for them.
 
 Eight counts in all. If the day's counts are short, count two goes first and count five second,
 because neither changes the pull: RN stays in the title words either way,
@@ -939,57 +940,57 @@ What the agent says, before the pull: "Pinloop has about 1,900 registered
 nurse postings from the last six months on the careers pages of the hospital
 systems in Chicago, Northwestern Medicine, Rush, UChicago Medicine, Advocate,
 Loyola, Cook County Health, Lurie Children's, Endeavor Health and seven more,
-some of them at their suburban hospitals, and about 900 more on job boards. I
+some of them at their suburban hospitals. I
 went in through the hospital systems because Pinloop narrows by country
 rather than by city; say so if you want the list or want one added. Want
 five from the careers pages?"
 
 After the pull: the five, then one sentence: "Those are five of about 1,900.
 I kept part time and per diem out only by reading the titles, so say if you
-want full time only or nights only, and the job boards also hold a few
-thousand Chicago nursing postings from staffing and travel agencies if you
-want those."
+want full time only or nights only, and I can count the job boards too,
+where staffing and travel agencies post, if you want those."
 
 4. A NAMED EMPLOYER WITH NOTHING ON ITS OWN PAGE
 
 The person says: "Is Shopify hiring backend engineers in Canada right now?"
 
 The working. One employer, one kind of job, one country, and a yes or no
-question. This one takes four counts rather than ten, because every number is
-small enough to read whole, and there are only two things to learn: where
+question. This one takes five counts, because every number is small enough
+to read whole, and there are only two things to learn: where
 Shopify's postings reach Pinloop from, and whether the words or the country
 are throwing any of them away. Every count below carries --company Shopify
 and --posted-after set to six months ago, because none of them puts words in
 the body of a posting.
 
-Count one, the employer alone, no other condition. It sees 0 from career
-sites and 210 from job boards. A zero with no condition on it cannot be a
-condition's fault: Shopify's own careers page is not one of the places
-Pinloop receives postings from, and the 210 on job boards are Shopify's
-postings all the same. The zero says nothing about whether Shopify is
-hiring, so the agent never says "not hiring". Every count after this one is
-a count of the job boards.
+Count one, the employer alone, no other condition and no --from. It sees 0
+on the career sites. A zero with no condition on it cannot be a condition's
+fault, so the agent looks at the other place before it concludes anything.
 
-Count two, the kind of job as a label: --category Software. It sees 0 and
-120. About half of what Shopify puts on the boards is software work; the
+Count two, the employer alone with --from "job boards". It sees 210.
+Shopify's own careers page is not one of the places Pinloop receives
+postings from, and the 210 on job boards are Shopify's postings all the
+same. The zero says nothing about whether Shopify is hiring, so the agent
+never says "not hiring". Every count after this one carries --from "job
+boards".
+
+Count three, the kind of job as a label: --category Software. It sees 120. About half of what Shopify puts on the boards is software work; the
 other half is sales, support, finance and the rest.
 
-Count three, the kind of job as title words: --in title "backend OR back-end
-OR server OR platform OR infrastructure OR API", no category. It sees 0 and
-64. So about half of the software postings are backend-shaped, and the rest
+Count four, the kind of job as title words: --in title "backend OR back-end
+OR server OR platform OR infrastructure OR API", no category. It sees 64. So about half of the software postings are backend-shaped, and the rest
 are front end, mobile, data and machine learning, which the person did not
 ask for.
 
-Count four, the country: the title words of count three with --country
-Canada. It sees 0 and 19. The gap, about 45, is the part to read carefully.
+Count five, the country: the title words of count four with --country
+Canada. It sees 19. The gap, about 45, is the part to read carefully.
 Shopify posts many roles as remote with no country on the posting at all, and
 a posting with no country matches no --country, so some of those 45 could be
 worked from Canada. The person asked for Canada, so the pull carries the
 country and spends postings only on the 19, and the 45 get one clause.
 
-Four counts. Nothing about employment or experience, because 19 is small
+Five counts. Nothing about employment or experience, because 19 is small
 enough that the five newest can be read whole and the titles say what they
-are. If the day's counts are short, count two goes, because it changes
+are. If the day's counts are short, count three goes, because it changes
 nothing about the pull.
 
 The pull: --company Shopify --in title "backend OR back-end OR server OR
@@ -1013,7 +1014,7 @@ WHAT THE FOUR HAVE IN COMMON
 A group of employers becomes names before a count, and all the names go on
 one count rather than one count each. A label is counted and then the shapes
 it misses are counted beside it, with the names a job goes by packed into one
-title value with OR so the checking fits inside about ten counts, and the
+title value with OR so the checking takes as few counts as it can, and the
 counts that would go first on a short day are the ones that change nothing
 about the pull. When the person asked for two things at once, both go in the
 title value as two bracketed groups joined with AND, so a five-posting pull
@@ -1268,10 +1269,9 @@ $ pinloop count nurse --country Ireland
 
 That asks how many nursing postings in Ireland exist over the last thirty days,
 or since the day --posted-after names when it names one. With no --from it counts
-both places a posting can come from and prints both numbers on one line, like
-"3,978 from career sites and 8,428 from job boards in the last month."; adding
---from "career sites" or --from "job boards" narrows it to that one place and
-prints the one number. It still hands over no posting and counts none against the
+the career sites only, prints the one number, and adds a sentence saying the job
+boards were not counted; adding --from "job boards" counts the job boards
+instead. It still hands over no posting and counts none against the
 account, but it does go out to ask, so an account may only run so many of these
 in a day.
 
@@ -1631,7 +1631,7 @@ hundred employers are one pull rather than a hundred pulls.
 --from is required on a pull and says which of the two places a posting can come
 from to collect from: "career sites", meaning employers' own hiring pages, or
 "job boards". A pull with no --from is refused before anything leaves this
-machine, in a sentence naming both values. The two hold different postings and
+machine, in a sentence naming the two values. The two hold different postings and
 neither is a subset of the other, so which one you ask for changes the answer
 completely. Ask both by running two pulls, and remember that each of the two
 counts its own rows against this account.
@@ -1666,8 +1666,8 @@ handed takes nothing out of it at all, and a pull that brings back a posting the
 account already has still counts against it.
 
 Second, ask "pinloop count" how many postings exist over the last thirty days.
-Leave --from off that count and it prints both places on one line, which is how
-you decide which --from the pull itself gets. The count hands over no posting and
+With no --from that count covers the career sites only; count again with --from
+"job boards" only when the person wants the job boards. The count hands over no posting and
 takes nothing out of the account.
 
 Third, narrow the conditions before you run the pull. Every row a pull brings
@@ -1704,19 +1704,17 @@ what is left and the day each one returns to full.`,
 It counts every posting available over the last thirty days, or since the day
 --posted-after names when it names one. It takes nothing out of this account's
 postings either, but it does go out to ask, so it has a limit of its own on how
-many times a day one account may run it, separate from the day's pulls and the
-same whether or not the account pays; typing "pinloop" on its own prints how many
-are left today. The count a pull runs for its own line is part of that pull and is
-not one of them.
+many times a day one account may run it, separate from the day's pulls:
+${MARKET_COUNTS_PER_DAY} counts a day on a free account and ${PAID_MARKET_COUNTS_PER_DAY} on a paid one. Typing "pinloop" on its own
+prints how many are left today. The count a pull runs for its own line, which
+it runs only when its page comes back full, is part of that pull and is not one
+of them.
 
 --from is optional on a count, unlike on a pull. A count with no --from counts
-both places a posting can come from and prints both numbers on one line, like
-"3,978 from career sites and 8,428 from job boards in the last month." That is
-the line to read before deciding which --from to put on the pull that follows.
-Adding --from "career sites" or --from "job boards" narrows the count to that one
-place and prints the one number in the usual "1,592 match in the last month."
-shape. Counting both still counts as one of the day's counts, because it is one
-command.
+the career sites only and prints the number in the usual "1,592 match in the
+last month." shape, followed by a sentence saying the job boards were not
+counted. Add --from "job boards" to count the job boards instead, and only when
+the person wants them, because each count is one of the day's counts.
 
 The conditions are the ten a pull takes. --company takes employers' names, one
 or more separated by commas or written as --company again for each one, and a
@@ -1724,9 +1722,7 @@ posting counts when it is from any one of them. One count takes at most 200 of
 them, so a hundred employers are one count rather than a hundred counts.
 
 --json prints one object holding the number, and
-the window as well when the count covered every posting available; a count that
-asked both places carries career_sites and job_boards beside matching, which is
-the two added together.
+the window as well when the count covered every posting available.
 
 A count that Pinloop cannot finish stops in the same words a pull does, takes
 nothing out of the account, and ends in failure.`,

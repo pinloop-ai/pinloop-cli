@@ -85,6 +85,7 @@ import {
   companyNeedsAnEmployerRefusal,
   employerNamesFrom,
   heldToEmployersLine,
+  jobBoardsNotCountedSentence,
   marketCountLine,
   MOST_EMPLOYERS_ON_ONE_COMMAND,
   pullNeedsAFromRefusal,
@@ -3745,10 +3746,11 @@ export function buildProgram(): Command {
       });
       const matching = Number(json?.matching ?? 0);
       const window = json?.window as PullWindow | undefined;
-      // A count over everything available that named neither of the two places a
-      // posting comes from asked both and answered both numbers (Andrew,
+      // A server from before 2026-09-26 answered a count that named neither of
+      // the two places a posting comes from with both numbers (Andrew,
       // 2026-09-13). Both being present is what says this was that kind of
-      // count; a count that named a place, and a free count, carry neither.
+      // answer, and this copy of the command still prints it. A server from
+      // 2026-09-26 on counts the career sites only and answers one number.
       const bothPlaces =
         typeof json?.career_sites === 'number' && typeof json?.job_boards === 'number'
           ? { careerSites: Number(json.career_sites), jobBoards: Number(json.job_boards) }
@@ -3764,10 +3766,16 @@ export function buildProgram(): Command {
         });
         return;
       }
+      // A count that named no place, answered with one number, counted the
+      // career sites only, and the line says so and says how to count the job
+      // boards (Andrew, 2026-09-26).
+      const namedAPlace = String(query.get('from') ?? '').trim() !== '';
       const line =
         bothPlaces !== undefined && window !== undefined
           ? bothFeedsCountLine(bothPlaces.careerSites, bothPlaces.jobBoards, window)
-          : marketCountLine(matching, window!);
+          : namedAPlace
+            ? marketCountLine(matching, window!)
+            : `${marketCountLine(matching, window!)} ${jobBoardsNotCountedSentence()}`;
       process.stdout.write(`${line}\n`);
       // Which employers that number covers, said only when the count was held to
       // more than one, and on the error stream so the number itself stays the
