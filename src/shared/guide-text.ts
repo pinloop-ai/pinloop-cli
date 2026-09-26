@@ -1086,7 +1086,12 @@ give it ids or give it none and pipe the JSON in. Everything else that takes
 posting ids, "pinloop judgment delete" and "pinloop judgment get" among them,
 takes them as words on the command line only and reads nothing from a pipe.
 
-One account may hold 100 tabs, each holding up to 1,000 postings, and a routine
+One account may make 3 tabs of its own, each holding up to 1,000 postings. An
+account that already held more than 3 keeps them all and makes no more until it
+is below 3. Every account also has one built-in tab named new, which does not
+count toward the 3: Pinloop fills it with the postings judged a fit in the chat
+on Pinloop's web app and takes a posting out when the person applies to it, and nobody can
+rename it, delete it, or put postings in or take them out by hand. A routine
 may hold up to 20 steps; those hold whether or not the account pays. An account
 that pays may also hold three timed routines, counting its schedules and its
 watches together; an account that does not pay may hold none of either.
@@ -1839,7 +1844,8 @@ the resume is removed, the stored file's bytes are destroyed with the row.`,
   // -------------------------------------------------------------------------
 
   'tab create': `Makes one named list of postings. The name is lowercase letters, digits and
-dashes. --description says what the tab is for. An account may hold 100 tabs.`,
+dashes. --description says what the tab is for. An account may make 3 tabs of
+its own, besides the built-in tab named new.`,
 
   'tab list': `Shows every tab this account has, with how many postings each one holds. --limit
 and --cursor page through the answer, --all follows every page at once, and
