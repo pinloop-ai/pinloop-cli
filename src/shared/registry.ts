@@ -99,6 +99,9 @@ export const DEFAULT_JUDGE_PROMPT =
   'drove the verdict. Grade honestly: this person wants a judgement they can act on, not ' +
   'encouragement.\n' +
   '\n' +
+  "Then write one sentence, at most 100 characters, for a small card on the person's screen, " +
+  'saying why this posting does or does not fit them.\n' +
+  '\n' +
   'Answer only in the shape you were given.\n';
 
 /**
