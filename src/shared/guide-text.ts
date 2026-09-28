@@ -93,7 +93,6 @@
  * section says out loud that a run today prints one line more than they show.
  */
 import {
-  MARKET_COUNTS_PER_DAY,
   MAX_MESSAGE_CHARS,
   MESSAGES_PER_DAY,
   PAID_MARKET_COUNTS_PER_DAY,
@@ -233,6 +232,15 @@ export function allowanceLines(allowances: unknown, plan?: unknown): string[] {
   if (offer !== undefined) {
     lines.push('');
     lines.push(proOfferBlock(offer));
+  }
+  // From the three plans (2026-09-24) the server also writes the lines a
+  // person reads about their plan, its state and how much of each of its four
+  // limits they have used (D15), and they are printed under the lines above as
+  // they came. A server older than that sends none.
+  const written = ((plan ?? {}) as Record<string, unknown>)['summary_lines'];
+  if (Array.isArray(written) && written.every((line) => typeof line === 'string')) {
+    lines.push('');
+    lines.push(...(written as string[]));
   }
   return lines;
 }
@@ -548,9 +556,8 @@ to report.
 5. Change one thing and count again. Try a different category, a different band
 of years of experience, the words dropped entirely, the words moved onto the
 title with --in title. Try one or two shapes before you settle on one, and no
-more, because every count is a request and the day's counts run out. A free
-account may run ${MARKET_COUNTS_PER_DAY} of these counts a day, and an account with a paid subscription
-may run ${PAID_MARKET_COUNTS_PER_DAY}.
+more, because every count is a request and the day's counts run out. An account
+on any plan may run ${PAID_MARKET_COUNTS_PER_DAY} of these counts a day.
 
 6. Only when the count says what the person asked for, run "pinloop pull", once.
 
@@ -1110,16 +1117,13 @@ An account may make up to ${RATE_LIMIT_REQUESTS} requests a minute. Past that th
 and says how long to wait; with --all the command waits it out for you rather
 than skipping a page.
 
-Three things an account may only do so much of. The first is job postings: every
-account has a number of them it may be handed, counted over a month if the
-account pays for a subscription and over a day if it does not. The second is
-judging, counted over a month. The third is searching by meaning, which is
-"pinloop viewed --semantic", also counted over a month. No number for any of the
-three is written here on purpose: a number written into these instructions is
-compiled into the copy of Pinloop somebody installed weeks ago and would be wrong
-by the time they read it. Type "pinloop" on its own and it prints how much of
-each is left, the day each one returns to full and, for an account that is not
-paying, what each of those numbers becomes on Pro and what Pro costs a month.
+Four things an account may only do so much of, each counted over the account's
+trial or its month: job postings it may be handed, judging units, applications
+Pinloop fills, and minutes of live review. An account with no plan may do none
+of them. No number for any of them is written here on purpose: a number written
+into these instructions is compiled into the copy of Pinloop somebody installed
+weeks ago and would be wrong by the time they read it. Type "pinloop" on its own
+and it prints the account's plan, its state, and how much of each it has used.
 
 Some lines Pinloop prints end with a paragraph of their own that begins "Tell the
 person now, word for word:" followed by a sentence in double quotes. That
@@ -1428,44 +1432,29 @@ reusing an old address. An account that already subscribes gets a one-time
 address into Stripe's own page, which is where a card is replaced, past charges
 are read, and the subscription is cancelled.
 
-It prints no numbers, for any account. What the free plan gives and what Pro
-gives are printed by "pinloop" typed on its own, so read those out when the
-person is deciding, and run this command only to open the page.
+It prints no numbers, for any account. What each plan gives is shown on the
+page it opens, so run this command when the person wants to pick or change a
+plan.
 
 Nothing more is printed in the terminal afterwards, whatever the person does in
-the browser. A subscription that starts raises every one of this account's limits
-from the next command onwards: the job postings it may be handed, which also
-stops being counted over a day and starts being counted over a month, the
-judging, the searches by meaning, the collecting runs a day and the match counts
-a day. It also lets the account store schedules and watches, up to three of them
-counting both kinds together, which is what lets a saved routine run with nobody
-at the keyboard.
+the browser. A plan that starts, or a trial, raises every one of this account's
+limits from the next command onwards, and lets the account store schedules and
+watches, up to three of them counting both kinds together, which is what lets a
+saved routine run with nobody at the keyboard.
 
-When somebody asks what the free plan gives and what paying adds, do not answer
-from memory and do not answer in words like "higher limits". Type "pinloop" on
-its own. It prints this account's own numbers and, for an account that is not
-paying, a block saying what the free plan gives, what Pro gives and
-what Pro costs a month. Read that block out to the person as it is printed, both
-sides, and when they say they want Pro, run "pinloop upgrade", which only opens
-the page. Say what each number counts rather than the bare figure. Read out the number the command printed and then say what it is
-a number of, which is job postings a day they have not seen before, and add that
-anything they have already been shown stays free to read however often. A bare
-figure with no noun on it reads as though the whole product handed over that many
-things a day. A person deciding whether to pay needs both sides
-in front of them; a sentence about limits being raised tells them nothing they
-can decide on. A cancelled subscription keeps the raised usage limits, and keeps its
-schedules and watches firing, until the last day already paid for; after that day
-the usage limits return to the free ones and the schedules and watches stop
-firing. Every job posting the account has already been handed stays its own,
-free to read for good, whatever happens to the subscription. A cancelled
-subscription
-deletes no schedule and no watch: "pinloop" typed on its own still lists every
-schedule and watch the account stored, with a line saying they are not running
-because the subscription ended, and they fire again if the person subscribes
-again. A renewal whose card fails changes nothing while the card is retried over
-about two weeks; if it is never paid the account returns to the free usage
-limits and its schedules and watches stop firing, in the same way as a
-cancellation.`,
+When somebody asks what the plans give, do not answer from memory and do not
+answer in words like "higher limits". Run "pinloop upgrade" and let them read the
+page it opens, which shows every plan's numbers.
+
+A cancelled subscription keeps its plan's limits, and keeps its schedules and
+watches firing, until the last day already paid for; after that day the account
+has no plan and its schedules and watches stop firing. Every job posting the
+account has already been handed stays its own, free to read for good, whatever
+happens to the subscription. A cancelled subscription deletes no schedule and no
+watch, and they fire again if the person subscribes again. A declined card stops
+the account's plan at once, schedules and watches included, until the card is
+updated and the bill is paid; the refusal the person reads then carries the link
+where they update it.`,
 
   // -------------------------------------------------------------------------
   // The five that take postings and hand postings on
@@ -1705,7 +1694,7 @@ It counts every posting available over the last thirty days, or since the day
 --posted-after names when it names one. It takes nothing out of this account's
 postings either, but it does go out to ask, so it has a limit of its own on how
 many times a day one account may run it, separate from the day's pulls:
-${MARKET_COUNTS_PER_DAY} counts a day on a free account and ${PAID_MARKET_COUNTS_PER_DAY} on a paid one. Typing "pinloop" on its own
+${PAID_MARKET_COUNTS_PER_DAY} counts a day on any plan. Typing "pinloop" on its own
 prints how many are left today. The count a pull runs for its own line, which
 it runs only when its page comes back full, is part of that pull and is not one
 of them.

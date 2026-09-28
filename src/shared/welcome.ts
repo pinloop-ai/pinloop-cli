@@ -354,6 +354,11 @@ This is the first real judgment they've seen, so don't bury it: put the
 verdict and the reasoning in front of them plainly and let them read it before
 you say anything else.`,
   },
+  // The closing step's plan numbers and prices are written out here because
+  // the installed command may not read the plan list (src/shared/plans.ts is
+  // not one of the files the published command is built from). They are the
+  // plan list's numbers as of 2026-09-24, and src/cli/welcome-numbers.test.ts
+  // fails the moment the two disagree.
   {
     kind: 'closing',
     explanation: `To close the first steps, after the person has read the verdict, give them the
@@ -385,21 +390,19 @@ opinion of them, so tell the person that plainly first — something like
 "here's how Pinloop describes what each plan gives you" — and then say exactly
 this:
 
-"On the free plan I can show you 5 job postings a day that you have not seen
-before — 10 the day your account is created — enough allowance each month for
-either 75 full judgments or 150 quick judgments, and 50 searches by meaning a
-month.
-Anything you have already been shown stays free to read, however often. Pro is
-$20 a month: 1,500 new postings a month instead of 5 a day, enough allowance
-for either 750 full judgments or 1,500 quick judgments each month instead of 75
-and 150, searches by meaning with no monthly limit, and up to 3 saved pieces of
-work that run on Pinloop's servers while you are away, so new postings get
-found and judged without you being here. Say 'upgrade Pinloop' and I'll open
-the page where you can subscribe."
+"Pinloop has three plans, and your first one starts with a 3-day free trial.
+Starter is $19 a month: 1,500 job postings and 1,500 judging units a month.
+Pro is $39 a month: 3,000 job postings and 3,000 judging units a month.
+Max is $99 a month: 6,000 job postings and 6,000 judging units a month.
+Every plan searches by meaning with no monthly limit and keeps up to 3 saved
+pieces of work running on Pinloop's servers while you are away, so new postings
+get found and judged without you being here. Anything you have already been
+shown stays free to read, however often. Say 'upgrade Pinloop' and I'll open
+the page where you can pick a plan."
 
-$20 a month is the only figure in dollars you ever name to the person — don't
-work out or invent any other dollar amount yourself. If they say yes, run
-pinloop upgrade, which opens the page. Leave this as things they can pick
+Those three monthly prices are the only figures in dollars you ever name to the
+person — don't work out or invent any other dollar amount yourself. If they say
+yes, run pinloop upgrade, which opens the page. Leave this as things they can pick
 from, and go where they point.`,
   },
 ]);
