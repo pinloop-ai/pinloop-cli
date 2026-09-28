@@ -1800,10 +1800,10 @@ ${CONFIRM_EXPLANATION}`,
   // -------------------------------------------------------------------------
 
   'profile put': `Stores one document under a name, replacing whatever that name held before. The
-text is read from standard input, or from a file with --file. Seven names mean
+text is read from standard input, or from a file with --file. Six names mean
 something to Pinloop itself: resume, background, preferences, constraints,
-application-instructions, judge-prompt and quick-judge-prompt. Any other name of
-lowercase letters, digits and dashes is yours to use.
+judge-prompt and quick-judge-prompt. Any other name of lowercase letters, digits
+and dashes is yours to use.
 
 The resume is a real PDF file rather than text: Pinloop checks that it is a PDF
 before storing any of it, keeps the bytes in a private store, and reads the words

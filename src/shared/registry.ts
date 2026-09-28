@@ -26,10 +26,14 @@ export type DocumentKind = 'text' | 'file';
  * The names the product itself gives meaning to, each with the one kind it may
  * hold. Growing this list is a spec change (specs/feature-profile.md), never a
  * code default.
+ *
+ * application-instructions was on this list until 2026-09-28, when the
+ * person's filling instructions moved to the top of their application-answers
+ * document (specs/feature-fill-instructions.md, architecture call 7). From then
+ * on it is a name like any the person made up.
  */
 export const RESERVED_NAMES: Readonly<Record<string, DocumentKind>> = Object.freeze({
   resume: 'file',
-  'application-instructions': 'text',
   constraints: 'text',
   background: 'text',
   preferences: 'text',
