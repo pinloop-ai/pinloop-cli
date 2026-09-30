@@ -27,6 +27,116 @@
 
 import { coverageOf, type Coverage } from './coverage.ts';
 
+// ---------------------------------------------------------------------------
+// Country names
+// ---------------------------------------------------------------------------
+
+/**
+ * Countries by their full English name, spelled the way the company Pinloop
+ * buys postings from spells them and the way the postings table stores them
+ * ("United States", "United Kingdom"). The list is the one
+ * src/normalize/contract.ts reads old location text with, plus Georgia, which
+ * that file leaves out because there a bare "Georgia" could be the US state.
+ * Here it is a whole country filter, so it can only mean the country.
+ *
+ * It is typed out here rather than imported because the installed `pinloop`
+ * command runs this file and may import only from src/cli/ and src/shared/
+ * (src/cli/package-boundary.test.ts). src/shared/filter.test.ts checks that
+ * every name the other list holds is also in this one.
+ */
+const FULL_COUNTRY_NAMES: readonly string[] = [
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina',
+  'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados',
+  'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina',
+  'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
+  'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia',
+  'Comoros', 'Congo', 'Democratic Republic of the Congo', 'Costa Rica', "Côte d'Ivoire", 'Croatia',
+  'Cuba', 'Cyprus', 'Czechia', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador',
+  'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia',
+  'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece',
+  'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana',
+  'Haiti', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq',
+  'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati',
+  'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya',
+  'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macau', 'Madagascar', 'Malawi', 'Malaysia',
+  'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico',
+  'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar',
+  'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria',
+  'North Korea', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama',
+  'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Puerto Rico',
+  'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia',
+  'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe',
+  'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia',
+  'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain',
+  'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan',
+  'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia',
+  'Turkey', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates',
+  'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City',
+  'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe',
+];
+
+/**
+ * Short forms and other ways of writing three countries, each written in lower
+ * case, with the full name each one stands for.
+ *
+ * The company Pinloop buys postings from matches a country by its full name
+ * only (developer.fantastic.jobs/api: "Use United States, not US. Use United
+ * Kingdom, not UK."), and the postings table stores the same full names. So
+ * "US" matched nothing anywhere: on 2026-09-30 a count of US internships on
+ * career sites came back 0 with "US" and 962 with "United States". Only whole
+ * values are turned into a full name. Anything else — "New York, United
+ * States", or two countries joined by OR — is sent on as typed.
+ */
+const COUNTRY_SHORT_FORMS: Readonly<Record<string, string>> = {
+  us: 'United States',
+  'u.s.': 'United States',
+  'u.s': 'United States',
+  usa: 'United States',
+  'u.s.a.': 'United States',
+  'u.s.a': 'United States',
+  'united states of america': 'United States',
+  'the united states': 'United States',
+  'the united states of america': 'United States',
+  america: 'United States',
+  uk: 'United Kingdom',
+  'u.k.': 'United Kingdom',
+  'u.k': 'United Kingdom',
+  gb: 'United Kingdom',
+  'great britain': 'United Kingdom',
+  britain: 'United Kingdom',
+  england: 'United Kingdom',
+  scotland: 'United Kingdom',
+  wales: 'United Kingdom',
+  'northern ireland': 'United Kingdom',
+  'the united kingdom': 'United Kingdom',
+  uae: 'United Arab Emirates',
+  'u.a.e.': 'United Arab Emirates',
+  'u.a.e': 'United Arab Emirates',
+  'the united arab emirates': 'United Arab Emirates',
+};
+
+/** Every full name and every short form, looked up by its lower-case spelling. */
+const COUNTRY_BY_LOWER_CASE: ReadonlyMap<string, string> = new Map([
+  ...FULL_COUNTRY_NAMES.map((name): [string, string] => [name.toLowerCase(), name]),
+  ...Object.entries(COUNTRY_SHORT_FORMS),
+]);
+
+/**
+ * The full name of the country a person or an agent wrote, such as "United
+ * States" for "US", "usa" or "united states", or what they wrote with the
+ * spaces around it removed when it is not a country this file knows.
+ *
+ * Every place a country condition enters Pinloop runs it through this first:
+ * a search, a list, a count, a collection, a saved search's run, and the
+ * filter below. So the same word finds the same postings whichever of them it
+ * was typed into, whether it came from the chat, the connector or the command
+ * line.
+ */
+export function fullCountryName(said: string): string {
+  const trimmed = said.trim();
+  return COUNTRY_BY_LOWER_CASE.get(trimmed.toLowerCase()) ?? trimmed;
+}
+
 /** The conditions a person asked for, in the words they typed them in. */
 export type FilterRules = {
   country?: string | undefined;
@@ -96,13 +206,14 @@ export function cutoffInstant(postedAfter: string): number {
  * runs of the same command say the same thing.
  */
 function firstRuleThisRowFails(row: StoredFields, rules: FilterRules): string | undefined {
-  if (rules.country !== undefined && rules.country !== '') {
+  const country = rules.country === undefined ? '' : fullCountryName(rules.country);
+  if (country !== '') {
     const countries = storedList(row.countries);
     if (countries === undefined) {
-      return `the country rule: this posting stores no countries at all, so it cannot be in ${rules.country}`;
+      return `the country rule: this posting stores no countries at all, so it cannot be in ${country}`;
     }
-    if (!countries.includes(rules.country)) {
-      return `the country rule: this posting's countries are ${countries.join(', ')}, not ${rules.country}`;
+    if (!countries.some((stored) => fullCountryName(stored) === country)) {
+      return `the country rule: this posting's countries are ${countries.join(', ')}, not ${country}`;
     }
   }
 
