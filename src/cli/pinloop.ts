@@ -3133,7 +3133,7 @@ export function buildProgram(): Command {
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
     .option(
       '--match <all|any>',
-      'whether a posting has to carry every word or just one of them (any by default)',
+      'whether a posting has to carry every word or just one of them (all by default)',
     )
     .option(
       '--order <match|newest>',
@@ -3378,7 +3378,7 @@ export function buildProgram(): Command {
     .option('--within <ids>', WITHIN_HELP)
     .option(
       '--match <all|any>',
-      'whether a posting has to carry every word or just one of them (any by default)',
+      'whether a posting has to carry every word or just one of them (all by default)',
     )
     .option(
       '--order <match|newest>',

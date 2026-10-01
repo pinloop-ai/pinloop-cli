@@ -1468,10 +1468,10 @@ person hoped for, "pinloop pull" is what goes and gets more.
 The words are optional. With words, whole words are matched, widened by plural
 rules and a small list of paired words, and the best matches come first. With no
 words the page is the newest postings by the date they were posted, because there
-is nothing to rank. --match all requires every word rather than any one of them,
---order newest puts the newest first even when words were typed, --in title looks
-at the title only, and --top says how many postings the server may consider
-before it stops.
+is nothing to rank. A posting has to carry every word you typed, and --match any
+asks for any one of them instead. --order newest puts the newest first even when
+words were typed, --in title looks at the title only, and --top says how many
+postings the server may consider before it stops.
 
 Narrow the result with --country, --workplace, --employment, --posted-after,
 --company, --experience, --education, --category and --from. Those ten conditions,
@@ -1603,9 +1603,10 @@ searching part of these instructions lists. The words are the one thing that doe
 not behave the way a search's words behave. A pull takes no --match at all, and
 every word you give it has to appear in the same posting before that posting comes
 back, which is what --match all does on a search. So a pull carrying six words
-finds only the postings carrying all six, and six words that worked on a search,
-where any one of them is enough, can match nothing at all here. There is no option
-that turns several words back into "any one of these will do". The one way to ask
+finds only the postings carrying all six, and six words that worked on a search
+run with --match any, where any one of them is enough, can match nothing at all
+here. There is no option that turns several words back into "any one of these
+will do". The one way to ask
 for that on a pull is to hold the words to the title and write them as a bracketed
 group with OR between them, as in --in title "(intern OR internship)". The part of
 these instructions on how the words you type are matched spells those brackets
