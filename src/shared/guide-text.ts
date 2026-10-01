@@ -1618,6 +1618,10 @@ them: separate several with commas, as in --company "Google,Microsoft", or write
 --company again for each one. A posting matches when it is from any one of them,
 a name may not contain a comma, and one pull takes at most 200 names. So a
 hundred employers are one pull rather than a hundred pulls.
+--country takes one country. Write --country again for each further country,
+as in --country Germany --country France, and a posting matches when it is in
+any one of them. So every country in the European Union is one pull rather than
+twenty-seven pulls.
 
 --from is required on a pull and says which of the two places a posting can come
 from to collect from: "career sites", meaning employers' own hiring pages, or
@@ -1711,6 +1715,9 @@ The conditions are the ten a pull takes. --company takes employers' names, one
 or more separated by commas or written as --company again for each one, and a
 posting counts when it is from any one of them. One count takes at most 200 of
 them, so a hundred employers are one count rather than a hundred counts.
+--country takes one country. Write --country again for each further country,
+as in --country Germany --country France, and a posting matches when it is in
+any one of them. That is still one count, and one of the day's counts.
 
 --json prints one object holding the number, and
 the window as well when the count covered every posting available.

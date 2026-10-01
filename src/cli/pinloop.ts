@@ -2473,6 +2473,39 @@ function alsoThisEmployer(written: string, soFar: string | undefined): string {
 }
 
 /**
+ * Gathers one more `--country` onto the ones already written, on a pull and a
+ * count (Andrew, 2026-10-01).
+ *
+ * Commander hands an option's value to this on every occurrence of the flag.
+ * One `--country` stays the one piece of text it always was, so a command naming
+ * one country sends exactly what it sent before. Writing `--country` again turns
+ * the value into a list, which travels to the server as a list. The names are
+ * never joined with commas, because a place such as "New York, United States"
+ * holds a comma of its own.
+ */
+function alsoThisCountry(written: string, soFar: string | string[] | undefined): string | string[] {
+  if (soFar === undefined) return written;
+  return [...(Array.isArray(soFar) ? soFar : [soFar]), written];
+}
+
+/**
+ * The body a pull or a count is sent with, carrying `--country` written more
+ * than once as the list of countries. The query built from the options skips a
+ * list, since it holds one piece of text per name, so the list is put on here.
+ */
+function withCountries(
+  body: Record<string, string>,
+  options: Record<string, unknown>,
+): Record<string, unknown> {
+  const countries = options['country'];
+  return Array.isArray(countries) ? { ...body, country: countries } : body;
+}
+
+/** What `--help` says about `--country` on a pull and a count. */
+const SEVERAL_COUNTRIES_HELP =
+  'only postings in this country. Write --country again for each further country';
+
+/**
  * The employer names a pull or a count was given, checked before anything leaves
  * this machine, or nothing when `--company` was not written at all.
  *
@@ -3564,7 +3597,7 @@ export function buildProgram(): Command {
     )
     .argument('[words...]', 'the words a posting has to contain')
     .option('--in <part>', 'match the words in only this part of a posting: title')
-    .option('--country <country>', 'only postings in this country')
+    .option('--country <country>', SEVERAL_COUNTRIES_HELP, alsoThisCountry)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
@@ -3623,7 +3656,7 @@ export function buildProgram(): Command {
       try {
         ({ json } = await callAsAccount(pass, '/pull', {
           method: 'POST',
-          body: bodyFrom(query),
+          body: withCountries(bodyFrom(query), options),
         }));
       } catch (error) {
         // Asked for JSON, a refusal and a pull that could not be finished are
@@ -3706,7 +3739,7 @@ export function buildProgram(): Command {
     .description('say how many postings match, and hand none of them over')
     .argument('[words...]', 'the words a posting has to contain')
     .option('--in <part>', 'match the words in only this part of a posting: title')
-    .option('--country <country>', 'only postings in this country')
+    .option('--country <country>', SEVERAL_COUNTRIES_HELP, alsoThisCountry)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
@@ -3742,7 +3775,7 @@ export function buildProgram(): Command {
 
       const { json } = await callAsAccount(pass, '/count', {
         method: 'POST',
-        body: bodyFrom(query),
+        body: withCountries(bodyFrom(query), options),
       });
       const matching = Number(json?.matching ?? 0);
       const window = json?.window as PullWindow | undefined;
