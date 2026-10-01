@@ -617,7 +617,7 @@ export function countNeedsAFlagRefusal(): string {
 export function couldNotFinishSentence(what: 'pull' | 'count'): string {
   return (
     `Pinloop could not finish this ${what}. This is a problem on Pinloop's side, not yours. ` +
-    'It has been recorded and Andrew has been notified of the error. The number of remaining ' +
+    "Something went wrong. We've been notified. The number of remaining " +
     'postings this account can view this month is unchanged. Try again in a few minutes.'
   );
 }

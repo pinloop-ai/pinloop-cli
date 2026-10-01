@@ -137,6 +137,89 @@ export function fullCountryName(said: string): string {
   return COUNTRY_BY_LOWER_CASE.get(trimmed.toLowerCase()) ?? trimmed;
 }
 
+// ---------------------------------------------------------------------------
+// Workplace kinds
+// ---------------------------------------------------------------------------
+
+/**
+ * Everyday ways of saying where a job is done, each written in lower case with
+ * hyphens and underscores read as spaces, with the stored value each one stands
+ * for.
+ *
+ * The postings table stores exactly four workplace values, "Remote Solely",
+ * "Remote OK", "Hybrid" and "On-site" (ALLOWED_WORKPLACE in
+ * src/normalize/contract.ts), and a search, list, count or collection refuses
+ * any other spelling. The published description of the field used to say
+ * "Remote, hybrid or on-site", so an AI's first try ("remote") was refused
+ * (found by the chat abilities page on branch user-testing-tool, 2026-09-30).
+ * "Remote Solely" is a job done fully remotely; "Remote OK" is a job that
+ * allows remote work, so a plain "remote" means "Remote Solely".
+ *
+ * The four stored values are typed out here rather than imported for the same
+ * reason the country names above are: the installed `pinloop` command runs this
+ * file and may import only from src/cli/ and src/shared/.
+ * src/shared/filter.test.ts checks that every value this list hands back is one
+ * of the stored ones.
+ */
+const WORKPLACE_WORDS: Readonly<Record<string, string>> = {
+  'remote solely': 'Remote Solely',
+  remote: 'Remote Solely',
+  'remote only': 'Remote Solely',
+  'only remote': 'Remote Solely',
+  'fully remote': 'Remote Solely',
+  'full remote': 'Remote Solely',
+  'all remote': 'Remote Solely',
+  '100% remote': 'Remote Solely',
+  'remote first': 'Remote Solely',
+  wfh: 'Remote Solely',
+  'work from home': 'Remote Solely',
+  'working from home': 'Remote Solely',
+  'from home': 'Remote Solely',
+  'remote ok': 'Remote OK',
+  'remote okay': 'Remote OK',
+  'remote friendly': 'Remote OK',
+  'remote optional': 'Remote OK',
+  'remote possible': 'Remote OK',
+  'remote allowed': 'Remote OK',
+  'remote eligible': 'Remote OK',
+  'remote available': 'Remote OK',
+  'open to remote': 'Remote OK',
+  hybrid: 'Hybrid',
+  'hybrid remote': 'Hybrid',
+  'partly remote': 'Hybrid',
+  'partially remote': 'Hybrid',
+  'part remote': 'Hybrid',
+  'on site': 'On-site',
+  onsite: 'On-site',
+  'in person': 'On-site',
+  inperson: 'On-site',
+  'in office': 'On-site',
+  'in the office': 'On-site',
+  office: 'On-site',
+  'office based': 'On-site',
+  'on premises': 'On-site',
+  'on premise': 'On-site',
+  'on prem': 'On-site',
+  onprem: 'On-site',
+};
+
+/**
+ * The stored workplace value a person or an agent meant, such as "Remote
+ * Solely" for "remote", "fully remote" or "WFH", "On-site" for "onsite" or "in
+ * person", and "Hybrid" for "hybrid", in any capitals. Anything else comes back
+ * as it was written with the spaces around it removed, so the check that
+ * refuses an unknown workplace still names every value it takes.
+ *
+ * Every place a workplace condition enters Pinloop runs it through this first,
+ * the same places fullCountryName above runs: a search, a list, a count, a
+ * collection, a saved search's run, and the filter below.
+ */
+export function workplaceValue(said: string): string {
+  const trimmed = said.trim();
+  const key = trimmed.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ');
+  return WORKPLACE_WORDS[key] ?? trimmed;
+}
+
 /** The conditions a person asked for, in the words they typed them in. */
 export type FilterRules = {
   country?: string | undefined;
@@ -217,13 +300,14 @@ function firstRuleThisRowFails(row: StoredFields, rules: FilterRules): string | 
     }
   }
 
-  if (rules.workplace !== undefined && rules.workplace !== '') {
+  const wantedWorkplace = rules.workplace === undefined ? '' : workplaceValue(rules.workplace);
+  if (wantedWorkplace !== '') {
     const workplace = row.workplace_type;
     if (workplace === null || workplace === undefined || workplace === '') {
-      return `the workplace rule: this posting stores no workplace kind, so it cannot be ${rules.workplace}`;
+      return `the workplace rule: this posting stores no workplace kind, so it cannot be ${wantedWorkplace}`;
     }
-    if (String(workplace) !== rules.workplace) {
-      return `the workplace rule: this posting's workplace is ${String(workplace)}, not ${rules.workplace}`;
+    if (workplaceValue(String(workplace)) !== wantedWorkplace) {
+      return `the workplace rule: this posting's workplace is ${String(workplace)}, not ${wantedWorkplace}`;
     }
   }
 
