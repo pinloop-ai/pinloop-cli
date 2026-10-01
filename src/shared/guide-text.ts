@@ -496,9 +496,9 @@ fewer postings than the --limit you asked for.
 "pinloop search" and "pinloop viewed" read the postings Pinloop has already
 collected, and they match words differently from the two commands above. There a
 whole word is matched, widened to its other spellings, so "intern" also looks
-for interns, internship and internships and stops matching "internal". Any one
-of your words is enough unless you add --match all, and --in title looks at the
-title only.
+for interns, internship and internships and stops matching "internal". Every
+one of your words has to appear unless you add --match any, and --in title looks
+at the title only.
 
 BUILD THE QUERY OUT OF THE CONDITIONS FIRST AND THE WORDS SECOND
 
@@ -1097,9 +1097,10 @@ takes them as words on the command line only and reads nothing from a pipe.
 One account may make 3 tabs of its own, each holding up to 1,000 postings. An
 account that already held more than 3 keeps them all and makes no more until it
 is below 3. Every account also has one built-in tab named new, which does not
-count toward the 3: Pinloop fills it with the postings judged a fit in the chat
-on Pinloop's web app and takes a posting out when the person applies to it, and nobody can
-rename it, delete it, or put postings in or take them out by hand. A routine
+count toward the 3: it holds every posting handed to this account that it has
+not applied to and has not archived on Pinloop's web app, the one something last
+happened to first, and nobody can rename it, delete it, or put postings in or
+take them out by hand. A routine
 may hold up to 20 steps; those hold whether or not the account pays. An account
 that pays may also hold three timed routines, counting its schedules and its
 watches together; an account that does not pay may hold none of either.
