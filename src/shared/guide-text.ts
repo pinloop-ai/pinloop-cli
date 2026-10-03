@@ -556,7 +556,8 @@ and once more for each nearby town they would accept. A posting in any one of
 them matches. --location works on "pinloop count", "pinloop pull", "pinloop
 search", "pinloop viewed" and "pinloop filter", and one command takes at most
 ${MOST_PLACES_ON_ONE_COMMAND} places. --country can be given beside it; a posting then has to be in the
-country and in one of the places.
+country and in one of the places. A step of a routine takes places too, under
+"location", so a schedule or a watch can look in them (see "routine put").
 
 Before you pull, check how postings spell each place: count it with "pinloop
 count", which hands over no posting, or read the locations on a few results of
@@ -1964,6 +1965,13 @@ underscore, as in "posted_after". An argument a command does not take is refused
 when the routine is stored, in a sentence naming the step, the argument and
 every argument that command does take, so a wrong name is found once rather than
 every night.
+
+Every argument holds one value except "location", which holds one place as text
+or several as a list, as in "location": ["Jersey City, New Jersey", "Hoboken,
+New Jersey"]. A search, viewed, pull or filter step matches places exactly
+as --location does and charges the same postings the typed command would. A
+place that matched nothing is named in the step's note on that run, and in the
+notes of a schedule's or a watch's last firing.
 
 A search step and a pull step count job postings exactly as the typed commands
 do, one for one, out of the same number this account has. A step is never

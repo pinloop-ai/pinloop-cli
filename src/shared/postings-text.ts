@@ -791,14 +791,18 @@ export function pullStepTakesNoPostedAfterRefusal(): string {
 export type EmptyPullStep = {
   /** Which step of the routine it is, counting the first step as 1. */
   position: number;
-  /** The conditions the step was counted over, as a pull reads them. */
-  conditions: Record<string, string>;
+  /**
+   * The conditions the step was counted over, as a pull reads them. Every one is
+   * text except `location`, which holds a list when the step names several places.
+   */
+  conditions: Record<string, string | readonly string[]>;
 };
 
 /** The order a pull step's conditions are read back to the person in. */
 const CONDITION_ORDER = [
   'in',
   'country',
+  'location',
   'workplace',
   'employment',
   'company',
@@ -815,7 +819,7 @@ function asWritten(value: string): string {
 
 /** The words a pull step names, one by one. */
 function wordsOf(step: EmptyPullStep): string[] {
-  return (step.conditions['q'] ?? '')
+  return String(step.conditions['q'] ?? '')
     .trim()
     .split(/\s+/)
     .filter((word) => word !== '');
@@ -824,12 +828,16 @@ function wordsOf(step: EmptyPullStep): string[] {
 /** A pull step's conditions written the way a person would type them. */
 function stepAsTyped(step: EmptyPullStep): string {
   const written: string[] = [];
-  const words = step.conditions['q'] ?? '';
+  const words = String(step.conditions['q'] ?? '');
   if (words.trim() !== '') written.push(`"${words}"`);
   for (const named of CONDITION_ORDER) {
     const value = step.conditions[named];
     if (value === undefined || value === '') continue;
-    written.push(`--${named} ${asWritten(value)}`);
+    // Several places are written the way they are typed: --location once for
+    // each place.
+    for (const one of typeof value === 'string' ? [value] : value) {
+      written.push(`--${named} ${asWritten(one)}`);
+    }
   }
   return written.join(' ');
 }

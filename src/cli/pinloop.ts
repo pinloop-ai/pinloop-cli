@@ -5292,8 +5292,14 @@ function addRoutineCommands(program: Command): void {
     const steps = Array.isArray(row['steps']) ? (row['steps'] as Record<string, unknown>[]) : [];
     steps.forEach((step, index) => {
       const args = (step['args'] ?? {}) as Record<string, unknown>;
+      // A list, which only `location` holds, is written as the JSON it was
+      // stored as: its places carry commas of their own, so joined into one piece
+      // of text they could not be told apart.
       const written = Object.entries(args)
-        .map(([argument, value]) => `${argument}=${String(value)}`)
+        .map(
+          ([argument, value]) =>
+            `${argument}=${typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}`,
+        )
         .join(' ');
       process.stdout.write(`  ${index + 1}. ${String(step['command'])} ${written}\n`.trimEnd() + '\n');
     });
@@ -5616,6 +5622,21 @@ function addRoutineCommands(program: Command): void {
 }
 
 /**
+ * The sentences a schedule's or a watch's last firing had to say about what it
+ * could not do, one per line under the line saying how the firing ended: a
+ * judge step's missing profile documents or used-up month, and a place a step's
+ * `location` named that matched no posting. A firing with nothing to say
+ * prints nothing here.
+ */
+function printFiringNotes(row: Record<string, unknown>): void {
+  const outcome = row['last_firing_outcome'] as Record<string, unknown> | null | undefined;
+  const notes = Array.isArray(outcome?.['notes']) ? (outcome['notes'] as unknown[]) : [];
+  for (const note of notes) {
+    if (typeof note === 'string' && note !== '') process.stdout.write(`  ${note}\n`);
+  }
+}
+
+/**
  * The `pinloop schedule` verbs: the rows that make a stored routine run without
  * anybody typing anything.
  *
@@ -5674,6 +5695,7 @@ function addScheduleCommands(program: Command): void {
     );
     process.stdout.write(`  next run ${String(row['next_due_at'])}\n`);
     process.stdout.write(`  ${firingLine(row)}\n`);
+    printFiringNotes(row);
   }
 
   schedule
@@ -5858,6 +5880,7 @@ function addWatchCommands(program: Command): void {
     // what the next firing is going to cover.
     process.stdout.write(`  watching from ${String(row['arrival_cutoff'])}\n`);
     process.stdout.write(`  ${firingLine(row)}\n`);
+    printFiringNotes(row);
     // A watch whose routine only reads the postings Pinloop has already collected
     // says so, and says what to store instead to have it go out and collect for
     // itself (docs/postings-release-slice-5-criteria.md, criterion 2). The server
