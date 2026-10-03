@@ -90,6 +90,7 @@ import {
   MOST_EMPLOYERS_ON_ONE_COMMAND,
   pullNeedsAFromRefusal,
   pullStopAndAskMessage,
+  placesMatchingNothingSentence,
   pullUsedLine,
   searchUsedLine,
   stopAndAskMessage,
@@ -2456,6 +2457,64 @@ function refuseAPullWithNoPlace(options: Record<string, unknown>): void {
 }
 
 /**
+ * Gathers one more `--location` onto the places already written (Andrew,
+ * 2026-10-03).
+ *
+ * Commander hands an option's value to this on every occurrence of the flag,
+ * so `--location "Jersey City, New Jersey" --location Hoboken` arrives as a list
+ * of two places. The places are never split or joined on commas, because a
+ * place such as "Jersey City, New Jersey" holds commas of its own.
+ */
+function alsoThisPlace(written: string, soFar: string[] | undefined): string[] {
+  return [...(soFar ?? []), written];
+}
+
+/** What `--help` says about `--location`. */
+const LOCATION_HELP =
+  'only postings whose location holds this place as an exact phrase, ignoring capitals ' +
+  'and commas. A location is written as city, region, country, such as "Lyon, ' +
+  'Auvergne-Rhône-Alpes, France". Write --location again for each further place; a ' +
+  'posting in any of them matches';
+
+/** The places `--location` was given, in the order written. */
+function placesTyped(options: Record<string, unknown>): string[] {
+  const places = options['location'];
+  return Array.isArray(places) ? places.map(String) : [];
+}
+
+/** The body a request is sent with, carrying the `--location` places as a list. */
+function withPlaces<Body extends Record<string, unknown>>(
+  body: Body,
+  options: Record<string, unknown>,
+): Body & { location?: string[] } {
+  const places = placesTyped(options);
+  return places.length === 0 ? body : { ...body, location: places };
+}
+
+/**
+ * The `--location` places an answer says matched no posting, read from the top
+ * of a search or count answer or from inside a pull's `postings`.
+ */
+function placesMatchingNothingIn(answer: unknown): string[] {
+  const body = answer as Record<string, unknown> | null | undefined;
+  const postings = body?.['postings'] as Record<string, unknown> | undefined;
+  const named = body?.['places_matching_nothing'] ?? postings?.['places_matching_nothing'];
+  return Array.isArray(named) ? named.map(String) : [];
+}
+
+/**
+ * Says on standard error which `--location` places matched no posting, so a
+ * place spelled the way no posting spells it is never silently left out.
+ */
+function sayPlacesMatchingNothing(answer: unknown, options: Record<string, unknown>): void {
+  const nothing = placesMatchingNothingIn(answer);
+  if (nothing.length === 0) return;
+  process.stderr.write(
+    `${placesMatchingNothingSentence(nothing, placesTyped(options).length)}\n`,
+  );
+}
+
+/**
  * Gathers one more `--company` onto the ones already written (Andrew,
  * 2026-09-14).
  *
@@ -3161,6 +3220,7 @@ export function buildProgram(): Command {
     .option('--limit <n>', 'how many postings to show')
     .option('--cursor <cursor>', 'the cursor a previous search handed back')
     .option('--country <country>', 'only postings in this country')
+    .option('--location <place>', LOCATION_HELP, alsoThisPlace)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
@@ -3273,7 +3333,7 @@ export function buildProgram(): Command {
         const every = await followEveryPage(
           'pinloop search',
           async (from) => {
-            const body = bodyFrom(query);
+            const body = withPlaces(bodyFrom(query), options);
             body['limit'] = String(PAGE_WHILE_FOLLOWING);
             if (from !== undefined) body['cursor'] = from;
             else delete body['cursor'];
@@ -3297,7 +3357,7 @@ export function buildProgram(): Command {
       } else {
         const { json } = await callAsAccount(pass, '/search', {
           method: 'POST',
-          body: bodyFrom(query),
+          body: withPlaces(bodyFrom(query), options),
         });
         rows = rowsOf(json);
         report = interpretationOf(json);
@@ -3330,6 +3390,10 @@ export function buildProgram(): Command {
         return;
       }
 
+      // A --location place that matched nothing is said on standard error, with
+      // --json or without, and travels in the JSON as well.
+      sayPlacesMatchingNothing(answered[0], options);
+
       if (options['json']) {
         // A JSON caller never sees the interpretation sentence above, but it
         // still needs to know when the ceiling cut its results short, so that
@@ -3338,6 +3402,8 @@ export function buildProgram(): Command {
         if (report && report['mode'] !== 'semantic') saySearchCoverage(report);
         const answer: Record<string, unknown> = { rows, cursor };
         if (report) answer['interpretation'] = report;
+        const nothing = placesMatchingNothingIn(answered[0]);
+        if (nothing.length > 0) answer['places_matching_nothing'] = nothing;
         // The sentence the line after a search would have carried rides here
         // instead, because with --json that line is never printed at all
         // (Andrew, 2026-09-14).
@@ -3405,6 +3471,7 @@ export function buildProgram(): Command {
     .option('--limit <n>', 'how many postings to show')
     .option('--cursor <cursor>', 'the cursor a previous run handed back')
     .option('--country <country>', 'only postings in this country')
+    .option('--location <place>', LOCATION_HELP, alsoThisPlace)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
@@ -3506,7 +3573,7 @@ export function buildProgram(): Command {
           const every = await followEveryPage(
             'pinloop viewed',
             async (from) => {
-              const body = bodyFrom(query);
+              const body = withPlaces(bodyFrom(query), options);
               body['limit'] = String(PAGE_WHILE_FOLLOWING);
               if (from !== undefined) body['cursor'] = from;
               else delete body['cursor'];
@@ -3521,7 +3588,7 @@ export function buildProgram(): Command {
         } else {
           const { json } = await callAsAccount(pass, '/viewed', {
             method: 'POST',
-            body: bodyFrom(query),
+            body: withPlaces(bodyFrom(query), options),
           });
           rows = rowsOf(json);
           report = interpretationOf(json);
@@ -3541,10 +3608,14 @@ export function buildProgram(): Command {
         throw error;
       }
 
+      sayPlacesMatchingNothing(answered[0], options);
+
       if (options['json']) {
         if (report && report['mode'] !== 'semantic') saySearchCoverage(report);
         const answer: Record<string, unknown> = { rows, cursor };
         if (report) answer['interpretation'] = report;
+        const nothing = placesMatchingNothingIn(answered[0]);
+        if (nothing.length > 0) answer['places_matching_nothing'] = nothing;
         printJson(answer);
         return;
       }
@@ -3598,6 +3669,7 @@ export function buildProgram(): Command {
     .argument('[words...]', 'the words a posting has to contain')
     .option('--in <part>', 'match the words in only this part of a posting: title')
     .option('--country <country>', SEVERAL_COUNTRIES_HELP, alsoThisCountry)
+    .option('--location <place>', LOCATION_HELP, alsoThisPlace)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
@@ -3656,7 +3728,7 @@ export function buildProgram(): Command {
       try {
         ({ json } = await callAsAccount(pass, '/pull', {
           method: 'POST',
-          body: withCountries(bodyFrom(query), options),
+          body: withPlaces(withCountries(bodyFrom(query), options), options),
         }));
       } catch (error) {
         // Asked for JSON, a refusal and a pull that could not be finished are
@@ -3689,6 +3761,9 @@ export function buildProgram(): Command {
 
       const rows = rowsOf(json);
       const numbers = json?.postings as Record<string, unknown> | undefined;
+      // A --location place that matched nothing is said on standard error, with
+      // --json or without; with --json it also travels inside `postings`.
+      sayPlacesMatchingNothing(json, options);
 
       if (options['json'] === true) {
         // The sentence a person has to hear rides inside the machine-readable
@@ -3716,6 +3791,11 @@ export function buildProgram(): Command {
         process.stderr.write(
           `${pullLineFrom(numbers, rows.length)}\n`,
         );
+        // A later page that hands over fewer postings than were asked for says
+        // why in one sentence the server built (2026-10-03). With --json it
+        // already travels inside `postings`, under `note`.
+        const note = numbers['note'];
+        if (typeof note === 'string' && note !== '') process.stderr.write(`${note}\n`);
       }
 
       // Which employers this pull was held to, said only when it was held to
@@ -3740,6 +3820,7 @@ export function buildProgram(): Command {
     .argument('[words...]', 'the words a posting has to contain')
     .option('--in <part>', 'match the words in only this part of a posting: title')
     .option('--country <country>', SEVERAL_COUNTRIES_HELP, alsoThisCountry)
+    .option('--location <place>', LOCATION_HELP, alsoThisPlace)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
@@ -3775,8 +3856,9 @@ export function buildProgram(): Command {
 
       const { json } = await callAsAccount(pass, '/count', {
         method: 'POST',
-        body: withCountries(bodyFrom(query), options),
+        body: withPlaces(withCountries(bodyFrom(query), options), options),
       });
+      sayPlacesMatchingNothing(json, options);
       const matching = Number(json?.matching ?? 0);
       const window = json?.window as PullWindow | undefined;
       // A server from before 2026-09-26 answered a count that named neither of
@@ -3796,6 +3878,9 @@ export function buildProgram(): Command {
             : { career_sites: bothPlaces.careerSites, job_boards: bothPlaces.jobBoards }),
           matching,
           ...(window === undefined ? {} : { window }),
+          ...(placesMatchingNothingIn(json).length === 0
+            ? {}
+            : { places_matching_nothing: placesMatchingNothingIn(json) }),
         });
         return;
       }
@@ -3843,6 +3928,7 @@ export function buildProgram(): Command {
     .description('retired: run pinloop search with no words instead')
     .option('--employment <employment>', 'only postings with this employment label')
     .option('--country <country>', 'only postings in this country')
+    .option('--location <place>', LOCATION_HELP, alsoThisPlace)
     .option('--workplace <workplace>', 'only postings with this workplace kind')
     .option('--posted-after <date>', 'only postings posted on or after this date (YYYY-MM-DD)')
     .option('--limit <n>', 'how many postings to show')
@@ -4020,6 +4106,7 @@ export function buildProgram(): Command {
     .command('filter')
     .description('keep the postings piped in that satisfy these conditions, and say what was dropped')
     .option('--country <country>', 'keep only postings in this country')
+    .option('--location <place>', LOCATION_HELP.replace(/^only/, 'keep only'), alsoThisPlace)
     .option('--workplace <workplace>', 'keep only postings with this workplace kind')
     .option('--employment <employment>', 'keep only postings with this employment label')
     .option('--posted-after <date>', 'keep only postings posted on or after this date (YYYY-MM-DD)')
@@ -4028,12 +4115,14 @@ export function buildProgram(): Command {
       const rows = await rowsPipedIn('pinloop filter');
       const rules: FilterRules = {
         country: textOption(options['country']),
+        location: placesTyped(options),
         workplace: textOption(options['workplace']),
         employment: textOption(options['employment']),
         posted_after: textOption(options['postedAfter']),
       };
 
-      const { survivors, dropped, coverage } = runFilter(rows, rules);
+      const filtered = runFilter(rows, rules);
+      const { survivors, dropped, coverage } = filtered;
       // The rows piped in already carry the title and the employer, so the drop
       // report below can name a posting the way a person knows it instead of by
       // its bare id, by looking each dropped id back up in the rows this run
@@ -4059,9 +4148,16 @@ export function buildProgram(): Command {
         );
         process.stderr.write(`dropped ${name}: ${drop.reason}\n`);
       }
+      sayPlacesMatchingNothing(filtered, options);
 
       if (options['json']) {
-        printJson({ rows: survivors, coverage });
+        printJson({
+          rows: survivors,
+          coverage,
+          ...(filtered.places_matching_nothing === undefined
+            ? {}
+            : { places_matching_nothing: filtered.places_matching_nothing }),
+        });
         return;
       }
       for (const card of survivors) printCard(card as unknown as Card);

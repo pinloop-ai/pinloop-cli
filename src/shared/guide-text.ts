@@ -99,6 +99,7 @@ import {
   PULL_CEILING,
   RATE_LIMIT_REQUESTS,
 } from './limits.ts';
+import { MOST_PLACES_ON_ONE_COMMAND } from './filter.ts';
 import {
   firstDayLine,
   firstDaySentence,
@@ -503,8 +504,8 @@ at the title only.
 BUILD THE QUERY OUT OF THE CONDITIONS FIRST AND THE WORDS SECOND
 
 The conditions that take fixed values are the exact ones: --category,
---employment, --experience, --education, --workplace, --from, --country and
---posted-after. A posting carries each of those as a label of its own, so asking
+--employment, --experience, --education, --workplace, --from, --country,
+--location and --posted-after. A posting carries each of those as a label of its own, so asking
 for --category "Customer Service & Support" and --employment FULL_TIME asks for
 the thing itself rather than for a word that happens to appear in the text
 somewhere. The searching part of these instructions lists every value each one
@@ -533,6 +534,74 @@ internship that is also software work, put both groups into that same one title
 value with AND between them, as in --in title "(intern OR internship) AND
 (software OR engineer)", so the count or the pull carries both demands itself
 rather than leaning on --category to supply the second one.
+
+WHERE THE JOB IS: --location
+
+A posting's location is written as city, region, country, for example "Lyon,
+Auvergne-Rhône-Alpes, France", and --location matches that text as an exact
+phrase: every word of the place, in the same order and next to each other, with
+capitals and commas ignored. --location Lyon and --location "Lyon,
+Auvergne-Rhône-Alpes" both match that posting. --location "Lyon, France" does
+not, because the region sits between the two words. Pinloop expands nothing: no
+metro areas, no abbreviations, no other names for a place. Choosing the places
+that cover what the person means is your job.
+
+The neighbourhoods and districts of a big city are usually filed under the
+city's own name, and the towns around it under their own names. A neighbourhood
+typed on its own usually matches nothing, or matches a town of the same name
+somewhere else.
+
+So to cover the area the person means, write --location once for the main city
+and once more for each nearby town they would accept. A posting in any one of
+them matches. --location works on "pinloop count", "pinloop pull", "pinloop
+search", "pinloop viewed" and "pinloop filter", and one command takes at most
+${MOST_PLACES_ON_ONE_COMMAND} places. --country can be given beside it; a posting then has to be in the
+country and in one of the places.
+
+Before you pull, check how postings spell each place: count it with "pinloop
+count", which hands over no posting, or read the locations on a few results of
+"pinloop viewed" or "pinloop search". A place that matches nothing is named in a
+sentence on standard error, and under places_matching_nothing in the JSON, and
+the rest of the answer still comes back. When that happens, try the region, or
+the spelling the postings use.
+
+Four worked examples, each checked against real postings on 2026-10-03.
+
+A city and its suburbs, across a state line. The person says: "Nursing jobs in
+New York City. I could also commute to Jersey City or Hoboken."
+$ pinloop count --in title "registered nurse OR RN" --location "New York, New York" --location "Jersey City, New Jersey" --location "Hoboken, New Jersey"
+Why these places: all five boroughs are filed under "New York, New York, United
+States", so Brooklyn and Queens are inside the first place; "NYC" and
+"Brooklyn, New York" match nothing. "New York" on its own would also match every
+town in the state, such as "Buffalo, New York, United States", so the city is
+written with its state. Jersey City and Hoboken are towns in New Jersey, filed
+under their own names, so each gets a --location of its own.
+
+A European city whose name is used elsewhere. The person says: "Software jobs
+in London."
+$ pinloop count --category Software --location "London, England"
+Why this place: postings in the city read "London, England, United Kingdom",
+"Greater London, England, United Kingdom" or "City of London, England, United
+Kingdom", and "London, England" matches all three. "London" on its own would
+also match "London, Ontario, Canada".
+
+An Asian city with two names. The person says: "Data analyst jobs in
+Bangalore."
+$ pinloop count --in title "data analyst" --location "Bengaluru" --location "Bangalore"
+Why these places: postings use both names, as "Bengaluru, Karnataka, India",
+"Bangalore, Karnataka, India" and "Bangalore Urban, Karnataka, India", and
+neither name alone finds every posting in the city, so both are written.
+
+A small place, where the region is the way in. The person says: "Anything near
+Oberammergau? I live there."
+$ pinloop count --location "Oberammergau"
+That matched nothing, because no posting names the village. The region is how
+postings in that part of Germany are written, as in "Munich, Bavaria, Germany",
+so count the region instead and tell the person the number covers all of
+Bavaria:
+$ pinloop count --location "Bavaria, Germany"
+Then read the location on each posting before you show it, and keep the ones
+near them, such as "Garmisch-Partenkirchen, Bavaria, Germany".
 
 THE LOOP TO RUN EVERY TIME
 
@@ -854,28 +923,22 @@ read each title. Say the word and I'll get some from the job boards too."
 Nothing about Legal versus Administrative, because it changes nothing the
 person can act on.
 
-3. A CITY, WHICH PINLOOP CANNOT FILTER ON
+3. A CITY
 
 The person says: "Nursing jobs in Chicago. I'm an RN."
 
 The working. Three things were asked for: nursing, registered nurse, Chicago.
-Location in Pinloop is --country only, so Chicago does not map onto a
-condition. A city can only be typed as a word, and a word with no --in title
-is matched loosely over the whole posting, so Chicago also matches a hospital
-chain's posting in Iowa whose boilerplate names a Chicago head office, and a
-posting in a suburb that says "twenty minutes from Chicago". There is one
-words condition per command, so the agent cannot ask for nurse in the title
-and Chicago in the body at the same time. The better way in is through the
-employers whose hospitals are in the city, and that is a choice made on the
-person's behalf, so it is said before a posting is spent. Every count below
-carries --country "United States"; the title-word counts carry --posted-after
-set to six months ago.
+Chicago maps onto --location, which matches the place as an exact phrase against
+the location each posting carries; Chicago's postings are written "Chicago,
+Illinois, United States". The nursing part is title words and a category, tuned
+with the counts below; the place is added once they are settled. The counts that
+tune the title words carry --country "United States" and --posted-after set to
+six months ago.
 
 Count one, the field, to learn what the title words catch across the whole
 country: --category Healthcare --in title "registered nurse OR RN OR staff
 nurse OR clinical nurse". It sees 48,000. Nursing is posted in numbers that large, so any Chicago answer is
-a small slice of it, and a Chicago count in the low hundreds is a query to
-fix rather than an answer to report.
+a small slice of it.
 
 Count two, what the two letters RN add: the same without RN, --category
 Healthcare --in title "registered nurse OR staff nurse OR clinical nurse". It
@@ -901,61 +964,35 @@ postings the reading left unlabelled. The person said nothing about hours, so
 the pull carries no employment label, and hours are read off the title, where
 nursing postings almost always write them.
 
-Count six, the city as a word: Chicago on its own with no --in title,
---category Healthcare, --posted-after set to a month ago because a count on
-body words reaches back one month. It sees 2,100. That is every
-healthcare posting in the country from the last month that mentions Chicago
-anywhere: nurses among medical assistants, therapists and technicians, some
-of them in the suburbs and some of them nowhere near the city. It cannot be
-pulled on as it stands, but it is the number the employer route is measured
-against.
+Count six, the place: the title words of count one, --category Healthcare,
+--posted-after six months ago, and --location "Chicago, Illinois" in place of
+the country. It sees 373 (counted 2026-10-03, later than the five counts above).
+"Chicago" on its own would also take in towns of that name in other states, so
+the city is written with its state. That phrase also matches North Chicago and
+West Chicago, two separate Illinois towns whose names end in it, so the agent
+reads the location on every card. The person named Chicago and nothing around
+it, so no suburb is added; the agent offers them in one sentence instead.
 
-Count seven, the employers. --company on pull takes a name and goes out with
-it exactly as typed, so each hospital system's most common name —
-Northwestern, Rush, UChicago, Advocate, Loyola, Cook County, Lurie, Endeavor,
-Sinai, Ascension, UI Health — is tried as written rather than looked up first.
-About fifteen names survive that, and --company takes all of them at once, so
-one count covers the whole list: the title words of count one, --category
-Healthcare, --posted-after six months ago, and every name on --company. It
-sees 1,900. Those are registered nurse postings at employers whose hospitals
-are in the city, which is closer to what was asked than a word match.
+Six counts in all. If the day's counts are short, count two goes first and count
+five second, because neither changes the pull: RN stays in the title words
+either way, and the employment label stays off either way.
 
-Count eight, how the two routes overlap: the same fifteen names on --company
-with Chicago as a body word instead of the title words, --category
-Healthcare, --posted-after a month ago. It sees 1,300, against count six's
-2,100 over the same month. So the fifteen systems account for most of
-everything healthcare on career sites that mentions Chicago, and what they do
-not account for is smaller employers, clinics and nursing homes, and
-out-of-town postings that merely name the city. That decides that the pull
-goes through the employers and comes from career sites. The job boards were
-not counted, because hospital systems post on their own pages first; they get
-one clause in what the agent says, so the person can ask for them.
+The pull: --category Healthcare --in title "registered nurse OR RN OR staff
+nurse OR clinical nurse" --location "Chicago, Illinois" --from "career sites"
+--posted-after six months ago, no employment label, --limit 5. The agent reads
+every title before showing it, for the letters RN inside another word and for
+hours the person may not want, and reads the location on each card, for North
+Chicago and West Chicago.
 
-Eight counts in all. If the day's counts are short, count two goes first and count five second,
-because neither changes the pull: RN stays in the title words either way,
-and the employment label stays off either way.
+What the agent says, before the pull: "Pinloop has about 370 registered nurse
+postings in Chicago from the last six months on employers' own careers pages.
+Want five? I can add nearby towns such as Evanston, Oak Park or Naperville if
+you'd work there."
 
-The pull: --company with the fifteen names, --category Healthcare --in title
-"registered nurse OR RN OR staff nurse OR clinical nurse" --country "United
-States" --from "career sites" --posted-after six months ago, no employment
-label, --limit 5. The agent reads every title before showing it, for the
-letters RN inside another word and for hours the person may not want, and
-reads the location on each card, because a large system also posts for its
-suburban hospitals and one of the five may be in Lake Forest or Naperville.
-
-What the agent says, before the pull: "Pinloop has about 1,900 registered
-nurse postings from the last six months on the careers pages of the hospital
-systems in Chicago, Northwestern Medicine, Rush, UChicago Medicine, Advocate,
-Loyola, Cook County Health, Lurie Children's, Endeavor Health and seven more,
-some of them at their suburban hospitals. I
-went in through the hospital systems because Pinloop narrows by country
-rather than by city; say so if you want the list or want one added. Want
-five from the careers pages?"
-
-After the pull: the five, then one sentence: "Those are five of about 1,900.
-I kept part time and per diem out only by reading the titles, so say if you
-want full time only or nights only, and I can count the job boards too,
-where staffing and travel agencies post, if you want those."
+After the pull: the five, then one sentence: "Those are five of about 370. I
+kept part time and per diem out only by reading the titles, so say if you want
+full time only or nights only, and I can count the job boards too, where
+staffing and travel agencies post, if you want those."
 
 4. A NAMED EMPLOYER WITH NOTHING ON ITS OWN PAGE
 
@@ -1026,7 +1063,7 @@ counts that would go first on a short day are the ones that change nothing
 about the pull. When the person asked for two things at once, both go in the
 title value as two bracketed groups joined with AND, so a five-posting pull
 never spends one of the five on a posting that fits half the request. A city
-becomes employers whose hospitals are there. A zero is explained rather than
+becomes --location, spelled the way its postings spell it. A zero is explained rather than
 concluded from. In all four, every sentence the person hears leads with what
 Pinloop has, the number and where it is, in their own words as what was
 counted and never as a fact about the world. A place Pinloop does not receive
@@ -1474,11 +1511,20 @@ asks for any one of them instead. --order newest puts the newest first even when
 words were typed, --in title looks at the title only, and --top says how many
 postings the server may consider before it stops.
 
-Narrow the result with --country, --workplace, --employment, --posted-after,
---company, --experience, --education, --category and --from. Those ten conditions,
-counting the words themselves as one of them, are the same ten "pinloop viewed",
-"pinloop pull" and "pinloop count" take, so a condition learned once works
-everywhere.
+Narrow the result with --country, --location, --workplace, --employment,
+--posted-after, --company, --experience, --education, --category and --from.
+Those eleven conditions, counting the words themselves as one of them, are the
+same eleven "pinloop viewed", "pinloop pull" and "pinloop count" take, so a
+condition learned once works everywhere.
+
+--location takes a place, matched as an exact phrase against the location a
+posting carries, which is written as city, region, country, such as "Jersey
+City, New Jersey, United States". Write --location again for each further place;
+a posting in any of them matches. Nothing is expanded, so a big city's
+neighbourhoods are found under the city's own name and nearby towns only under
+their own names. The part of these instructions on how to use Pinloop well
+explains how to choose the places, with worked examples. A place that matches
+nothing is named on standard error.
 
 Six of them take fixed values and it is worth knowing them exactly. --workplace
 is one of Remote Solely, Remote OK, Hybrid or On-site. --employment is one of
@@ -1560,7 +1606,7 @@ word it looked for. A wordless search says so in that line, naming what it
 narrowed by instead.`,
 
   viewed: `Searches the postings this account has already been handed, and nothing else. It
-takes the same words, the same ten conditions and the same paging options
+takes the same words, the same eleven conditions and the same paging options
 "pinloop search" takes, and answers in the same shape, so anything that reads a
 search reads this too.
 
@@ -1599,7 +1645,7 @@ Every row it brings back is written onto this
 account's own permanent list of postings, which is what makes that row free from
 then on to "pinloop viewed", "pinloop fetch", judging and tabs.
 
-It takes the same ten conditions a search takes, with the same fixed values the
+It takes the same eleven conditions a search takes, with the same fixed values the
 searching part of these instructions lists. The words are the one thing that does
 not behave the way a search's words behave. A pull takes no --match at all, and
 every word you give it has to appear in the same posting before that posting comes
@@ -1638,11 +1684,11 @@ The line printed after a pull names the day to pass back as --posted-after next
 time, so the next pull over the same conditions brings back only what is newer.
 
 --limit says how many to bring back, twenty when nothing says otherwise.
---cursor asks for the page after the one you have; a later page asks for the same
-list again and skips the rows already handed out, so nothing hides between two
-pages. --all brings back everything that matches. --json prints rows a following
-command can read, each one saying whether this account had already been handed
-it.
+--cursor asks for the page after the one you have. A later page leaves out every
+posting this account already has, collects more to take their places, and counts
+only the postings it hands over; a page that still comes up short says why. --all
+brings back everything that matches. --json prints rows a following command can
+read, each one saying whether this account had already been handed it.
 
 Before anything leaves this machine, a pull compares the page it is about to ask
 for against what this account has left. A page that does not fit is refused
@@ -1711,7 +1757,7 @@ last month." shape, followed by a sentence saying the job boards were not
 counted. Add --from "job boards" to count the job boards instead, and only when
 the person wants them, because each count is one of the day's counts.
 
-The conditions are the ten a pull takes. --company takes employers' names, one
+The conditions are the eleven a pull takes. --company takes employers' names, one
 or more separated by commas or written as --company again for each one, and a
 posting counts when it is from any one of them. One count takes at most 200 of
 them, so a hundred employers are one count rather than a hundred counts.
@@ -1744,16 +1790,18 @@ fetching it counts one.`,
   filter: `Keeps the postings piped into it that satisfy the conditions you give, and says
 on standard error what it dropped and why. It contacts no server at all: it works
 on rows another command already printed, so it counts nothing against this
-account. --country, --workplace, --employment and --posted-after are the
-conditions, and they take the same values the searching part of these
-instructions lists; --experience, --education, --category and --from are not among
+account. --country, --location, --workplace, --employment and --posted-after are
+the conditions, and they take the same values the searching part of these
+instructions lists; --location reads the locations each row carries; --experience, --education, --category and --from are not among
 them, so narrowing by one of those four has to be done by the command that
 produced the rows. --json prints the survivors as rows a following command can
 read.
 
-There is no region or continent condition of any kind. Keeping the postings in
-Europe means naming the countries yourself and running filter once per country,
-because --country holds one country at a time.`,
+There is no continent condition. Keeping the postings in Europe means naming
+the countries yourself and running filter once per country, because --country
+holds one country at a time. A region inside a country is a place --location
+matches, as in --location "Bavaria, Germany", and --location takes several
+places at once.`,
 
   judge: `Reads postings against this account's stored documents and stores a verdict for
 each one, with the reasoning behind it. Give the posting ids, or pipe in the JSON

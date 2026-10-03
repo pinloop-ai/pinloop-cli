@@ -223,6 +223,12 @@ export function workplaceValue(said: string): string {
 /** The conditions a person asked for, in the words they typed them in. */
 export type FilterRules = {
   country?: string | undefined;
+  /**
+   * One or more places, each matched as an exact phrase against the posting's
+   * stored locations (see placeMatches below). A posting is kept when any one
+   * of them matches.
+   */
+  location?: string | readonly string[] | undefined;
   workplace?: string | undefined;
   employment?: string | undefined;
   posted_after?: string | undefined;
@@ -238,6 +244,13 @@ export type FilterDrop = {
 export type FilterAnswer<Row> = {
   survivors: Row[];
   dropped: FilterDrop[];
+  /**
+   * The --location places no surviving posting is in, in the order they were
+   * given. Present only when --location was given and at least one place
+   * matched nothing, so a misspelled place is said out loud rather than
+   * quietly contributing nothing.
+   */
+  places_matching_nothing?: string[];
   /** How many rows satisfied every rule, out of how many were handed in. */
   coverage: Coverage;
 };
@@ -246,6 +259,7 @@ export type FilterAnswer<Row> = {
 type StoredFields = {
   id?: unknown;
   countries?: unknown;
+  locations?: unknown;
   workplace_type?: unknown;
   employment_type?: unknown;
   posted_at?: unknown;
@@ -288,7 +302,11 @@ export function cutoffInstant(postedAfter: string): number {
  * so a row failing two of them is always reported against the same one, and two
  * runs of the same command say the same thing.
  */
-function firstRuleThisRowFails(row: StoredFields, rules: FilterRules): string | undefined {
+function firstRuleThisRowFails(
+  row: StoredFields,
+  rules: FilterRules,
+  places: readonly string[] | undefined,
+): string | undefined {
   const country = rules.country === undefined ? '' : fullCountryName(rules.country);
   if (country !== '') {
     const countries = storedList(row.countries);
@@ -297,6 +315,17 @@ function firstRuleThisRowFails(row: StoredFields, rules: FilterRules): string | 
     }
     if (!countries.some((stored) => fullCountryName(stored) === country)) {
       return `the country rule: this posting's countries are ${countries.join(', ')}, not ${country}`;
+    }
+  }
+
+  if (places !== undefined) {
+    const locations = storedList(row.locations);
+    const wanted = places.map((place) => `"${place}"`).join(' or ');
+    if (locations === undefined || locations.length === 0) {
+      return `the location rule: this posting stores no locations at all, so it cannot be in ${wanted}`;
+    }
+    if (!places.some((place) => placeMatches(locations, place))) {
+      return `the location rule: this posting's locations are ${locations.join('; ')}, and none of them holds ${wanted}`;
     }
   }
 
@@ -343,9 +372,10 @@ function firstRuleThisRowFails(row: StoredFields, rules: FilterRules): string | 
 export function runFilter<Row>(rows: readonly Row[], rules: FilterRules): FilterAnswer<Row> {
   const survivors: Row[] = [];
   const dropped: FilterDrop[] = [];
+  const places = placesFrom(rules.location);
 
   for (const row of rows) {
-    const reason = firstRuleThisRowFails((row ?? {}) as StoredFields, rules);
+    const reason = firstRuleThisRowFails((row ?? {}) as StoredFields, rules, places);
     if (reason === undefined) {
       survivors.push(row);
     } else {
@@ -353,5 +383,122 @@ export function runFilter<Row>(rows: readonly Row[], rules: FilterRules): Filter
     }
   }
 
-  return { survivors, dropped, coverage: coverageOf(survivors.length, rows.length) };
+  // A place matches something among the rows that pass every other rule exactly
+  // when it matches one of the survivors, because a survivor is a row that
+  // passes every other rule and is in at least one of the places.
+  const nothing =
+    places === undefined
+      ? []
+      : places.filter(
+          (place) =>
+            !survivors.some((row) =>
+              placeMatches(storedList((row as StoredFields | null)?.locations) ?? [], place),
+            ),
+        );
+
+  return {
+    survivors,
+    dropped,
+    coverage: coverageOf(survivors.length, rows.length),
+    ...(nothing.length === 0 ? {} : { places_matching_nothing: nothing }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// --location: places matched as exact phrases (Andrew, 2026-10-03)
+// ---------------------------------------------------------------------------
+//
+// A posting's location is stored the way the company Pinloop buys postings from
+// writes it: city, region, country, such as "Lyon, Auvergne-Rhône-Alpes,
+// France". --location matches each place it is given as an exact phrase
+// against that text: every word of the place, in the same order and next to
+// each other, ignoring capitals and punctuation such as commas. So "New York,
+// New York" matches "New York, New York, United States" and "Berlin, Germany"
+// matches both "Berlin, Germany" and "Berlin, Berlin, Germany", while "NYC" and
+// "Brooklyn" match nothing in New York, because no posting's location is
+// written that way. Pinloop expands nothing: no metro areas, no abbreviations,
+// no other names for a place. Choosing places that cover what the person means
+// is the job of whoever types the command.
+//
+// The same rule is applied in three places, which is why it is written down
+// here once: by this file for `pinloop filter`, in the database for a search,
+// a list and a free count (src/core/search.ts, locationCondition), and by the
+// company for a pull and a count of everything available, which is sent each
+// place as a quoted phrase (src/core/pull.ts, locationAdvancedFor).
+
+/** The most places one command may name with --location. */
+export const MOST_PLACES_ON_ONE_COMMAND = 20;
+
+/** The most characters one --location place may hold. */
+export const LONGEST_PLACE = 200;
+
+/** A --location value nobody can search for; the message says what is accepted. */
+export class LocationRefused extends Error {}
+
+/**
+ * The places a --location value names, each trimmed, with empty ones dropped
+ * and a place written twice kept once, or undefined when no place was given.
+ *
+ * The value arrives as one piece of text when --location was written once and
+ * as a list when it was written several times. Places are never split on
+ * commas, because a place such as "Jersey City, New Jersey" holds commas of its
+ * own.
+ */
+export function placesFrom(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  const written = Array.isArray(value) ? value : [value];
+  const places: string[] = [];
+  const seen = new Set<string>();
+  for (const one of written) {
+    if (typeof one !== 'string') {
+      throw new LocationRefused('location must be a place written as text, or a list of them');
+    }
+    const place = one.trim();
+    if (place === '') continue;
+    if (place.length > LONGEST_PLACE) {
+      throw new LocationRefused(
+        `each --location place may be at most ${LONGEST_PLACE} characters long`,
+      );
+    }
+    const words = placeWords(place);
+    if (words.trim() === '') {
+      throw new LocationRefused(
+        'each --location place needs letters or digits in it, such as "Lyon, Auvergne-Rhône-Alpes, France"',
+      );
+    }
+    if (seen.has(words)) continue;
+    seen.add(words);
+    places.push(place);
+  }
+  if (places.length > MOST_PLACES_ON_ONE_COMMAND) {
+    throw new LocationRefused(
+      `--location takes at most ${MOST_PLACES_ON_ONE_COMMAND} places on one command. ` +
+        'Split the places across several commands.',
+    );
+  }
+  return places.length === 0 ? undefined : places;
+}
+
+/**
+ * A place or a stored location written the way the phrase match compares them:
+ * lowercase, with every run of punctuation and spaces turned into one space,
+ * and one space at each end, so a phrase is found only on whole words.
+ * "Jersey City, New Jersey" becomes " jersey city new jersey ".
+ *
+ * The database writes stored locations the same way, with lower() and the
+ * POSIX classes [:punct:] and [:space:] (src/core/search.ts).
+ */
+export function placeWords(text: string): string {
+  const words = text
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}\s]+/gu, ' ')
+    .trim();
+  return ` ${words} `;
+}
+
+/** True when any one of a posting's stored locations holds the place as an exact phrase. */
+export function placeMatches(locations: readonly string[], place: string): boolean {
+  const wanted = placeWords(place);
+  if (wanted.trim() === '') return false;
+  return locations.some((stored) => placeWords(stored).includes(wanted));
 }

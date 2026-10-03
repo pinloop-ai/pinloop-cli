@@ -421,6 +421,44 @@ export function pullUsedLine({
   return said + relayParagraph(pullUsedTheLastSentence(offer, pulled, matching), OPEN_THE_PAGE);
 }
 
+/** What a later page of a pull that came up short is described from. */
+export type LaterPageShort = {
+  /** How many postings the page handed over. */
+  handed: number;
+  /** How many postings the page asked for. */
+  asked: number;
+  /** How many matching postings it left out because this account already had them. */
+  skipped: number;
+  /**
+   * Why it is short: no more postings match, it stopped looking after its extra
+   * tries, or collecting the rest failed partway through.
+   */
+  why: 'no-more' | 'stopped' | 'failed';
+};
+
+/**
+ * The sentence a later page of a pull carries when it hands over fewer postings
+ * than were asked for (Andrew's approved fix, 2026-10-03). A later page leaves
+ * out every posting this account already has and collects more to fill their
+ * places, so a short page is never silent about why it is short.
+ */
+export function laterPageShortSentence({ handed, asked, skipped, why }: LaterPageShort): string {
+  const holds = `This page holds ${withCommas(handed)} of the ${withCommas(asked)} postings asked for`;
+  const leftOut =
+    skipped === 0
+      ? ''
+      : ` ${withCommas(skipped)} matching ${skipped === 1 ? 'posting' : 'postings'} you already ` +
+        `had ${skipped === 1 ? 'was' : 'were'} left out and not counted.`;
+  if (why === 'no-more') return `${holds}, because no more postings match.${leftOut}`;
+  if (why === 'stopped') {
+    return `${holds}.${leftOut} More postings match; ask for the next page to see them.`;
+  }
+  return (
+    `${holds}, because collecting the rest failed partway through.${leftOut} ` +
+    'Ask for the next page to try again.'
+  );
+}
+
 /** The numbers the refusal before a pull is built from. */
 export type NotEnoughForPull = {
   /** How many postings this pull would take, which is every row it would bring back. */
@@ -1104,4 +1142,34 @@ export function advancedTitleFrom(typed: string): string {
     lastEndedSomething = piece.kind === 'word' || piece.kind === 'close';
   }
   return built;
+}
+
+/**
+ * The sentence printed when one or more --location places matched no posting
+ * under the conditions given (Andrew, 2026-10-03). A place that matches nothing
+ * is nearly always a spelling postings do not use, such as "NYC" or a
+ * neighbourhood's own name, and it would otherwise contribute nothing without a
+ * word, so the person and their agent are told which place it was, how a
+ * posting's location is written, and what to try instead. The rest of the
+ * answer is still printed.
+ *
+ * `allPlaces` is how many places the command named, so the last sentence is
+ * said only when other places were used.
+ */
+export function placesMatchingNothingSentence(
+  places: readonly string[],
+  allPlaces: number,
+): string {
+  const named = places.map((place) => `--location "${place}"`);
+  const list =
+    named.length === 1
+      ? named[0]!
+      : `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]!}`;
+  const others = allPlaces > places.length ? ' The other places were still used.' : '';
+  return (
+    `${list} matched no postings under these conditions. A posting's location is ` +
+    'written as city, region, country, such as "Lyon, Auvergne-Rhône-Alpes, France", ' +
+    'and --location matches it as an exact phrase. Check how postings spell the place, ' +
+    `or try its region.${others}`
+  );
 }
