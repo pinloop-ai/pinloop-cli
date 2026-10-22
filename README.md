@@ -65,21 +65,6 @@ Run `pinloop login` to make an account.
 The commands talk to Pinloop's servers, so everything except the guide needs an
 account. Login goes through a browser, with no password.
 
-Free plan:
-- Search Pinloop with words and filters to count how many postings match you before pulling
-- Pull 5 postings per day
-- Judge 150 postings per month through LLM calls (or infinite postings w/ your own agent)
-- 50 semantic searches per month
-
-Pro plan:
-- Pull 1500 postings per month
-- Judge 1500 postings per month through LLM calls
-- Set routines to scan and save postings automatically on Pinloop's servers, either on a schedule or when new postings come in, even when your laptop is closed
-- Unlimited semantic search
-- Everything on Free
-
-Run `pinloop upgrade` to upgrade to Pro.
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
