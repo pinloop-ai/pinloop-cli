@@ -428,9 +428,12 @@ left. No such number is written into these instructions on purpose: a number
 written here is compiled into the copy of Pinloop somebody installed weeks ago
 and is wrong by the time they read it.
 
-Pinloop searches postings and judges them. It does not fill application forms in
-and it does not submit applications. If the person expects that, say so plainly
-rather than letting them find out later.
+Pinloop searches postings, judges them, and applies to them. "pinloop apply"
+starts applications: Pinloop fills out each employer's form itself, in a browser
+in the cloud, and the person watches it fill and reviews it in the Pinloop web
+app, whose address every answer names. Whether Pinloop then sends the form or
+waits for the person is the person's own setting in that web app. Nothing of the
+form itself is shown at this terminal.
 
 A line may appear under any command's answer saying this copy of Pinloop is older
 than the newest published one. It names both version numbers and the command that
@@ -1803,6 +1806,38 @@ the countries yourself and running filter once per country, because --country
 holds one country at a time. A region inside a country is a place --location
 matches, as in --location "Bavaria, Germany", and --location takes several
 places at once.`,
+
+  apply: `Starts applications. Give the posting ids, or pipe in the JSON another command
+printed, and Pinloop starts an application to each posting this account has been
+handed, the way the Apply button on a job in the web app does. Or give --best,
+alone or with a number up to 25, and Pinloop picks the next best matches among
+the jobs this account has been handed, the way the web app's Apply now button
+does: rated strong first, then fair, the newest posting first within each, never
+a weak or unrated job, never a job that ever had an application, and never one on
+a site Pinloop can't apply on; five when no number is given, and the next ones on
+the next run.
+
+Pinloop fills out each form itself and sends it or waits for the person, as their
+own submit setting in the web app says. Each application started counts as one of
+the applications the person's plan or free trial includes. The first lines
+printed are for the person: how many started and the address of the web app,
+where they watch each form fill and review it, then any job that was skipped and
+why. Pass them on as printed. When the applications run out, or the account has
+no plan, the command fails with the web app's own words about it and the address
+to open. "pinloop applications" says where each one stands later. --json prints
+one JSON object holding the applications started and the lines.`,
+
+  applications: `Shows where this account's applications stand, the one something last happened
+to first, in the words the web app shows: Queued, Filling, Action needed,
+Waiting on your answers, Ready for you or Sent. Queued waits for its turn to be
+filled; Filling is being filled now; Waiting on your answers means the form
+stopped on questions only the person can answer; Action needed means Pinloop
+stopped before the end of the form; Ready for you is filled and waits for the
+person to review and send it. Give application ids or posting ids to show only
+those. The most recent come first, and when not all of them are shown, a line on
+the error stream says how many are shown out of how many. The last line is the
+address of the web app, where the person reviews them. --json prints one JSON
+object holding the applications.`,
 
   judge: `Reads postings against this account's stored documents and stores a verdict for
 each one, with the reasoning behind it. Give the posting ids, or pipe in the JSON

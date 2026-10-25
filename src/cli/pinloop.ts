@@ -4656,6 +4656,125 @@ function addJudgeCommands(program: Command): void {
       for (const row of rows) if (row['reused'] !== true) printJudgment(row);
     });
 
+  /**
+   * `pinloop apply` and `pinloop applications`: starting applications and
+   * reading where they stand (Andrew's go, 2026-10-24).
+   *
+   * Pinloop fills each application itself, in a browser in the cloud, and the
+   * person watches it fill and reviews it in the Pinloop web app; nothing of the
+   * form is shown here. The server decides everything: which postings may be
+   * applied to, the trial's and the plan's applications, the resume, the
+   * person's submit setting. Each command prints the server's own lines, which
+   * name the web app's address, and then one line per application.
+   *
+   *   pinloop apply <ids>      POST /apply/postings, as a tile's Apply does
+   *   pinloop apply --best [n] POST /apply/best, the next best matches, as the
+   *                            Apply now button does (five unless n says)
+   *   pinloop applications     GET /apply/status
+   *
+   * A refusal (no plan, no applications left, no resume) is the server's
+   * sentence on the error stream, which for a limit is the web app's own limit
+   * prompt with the address its button opens.
+   */
+  function applicationLine(row: Record<string, unknown>): string {
+    const status = String(row['status'] ?? '');
+    const title = typeof row['title'] === 'string' && row['title'] !== '' ? row['title'] : undefined;
+    const company = typeof row['company'] === 'string' && row['company'] !== '' ? row['company'] : undefined;
+    const named = title !== undefined && company !== undefined ? `${title} at ${company}` : (title ?? company);
+    const id = String(row['posting_id'] ?? '');
+    return named === undefined ? `${status}  ${id}` : `${status}  ${named} (${id})`;
+  }
+
+  async function idsToApplyTo(given: string[]): Promise<string[]> {
+    const typed = given.flatMap((one) => one.split(',')).filter((one) => one.trim() !== '');
+    if (typed.length > 0) return typed;
+    return idsPipedIn('pinloop apply');
+  }
+
+  program
+    .command('apply')
+    .description(
+      'start applications, which Pinloop fills itself; the person watches them fill and reviews them in the web app',
+    )
+    .argument('[ids...]', 'the posting ids to apply to; with none, they are read from what is piped in')
+    .option(
+      '--best [count]',
+      'apply to the next best matches instead, Strong before Fair, the way the Apply now button does: ' +
+        'five, or this many up to 25',
+    )
+    .option('--json', 'print one JSON object holding the applications started, instead of lines')
+    .action(async (ids: string[], options: { best?: string | boolean; json?: boolean }) => {
+      const pass = readPass();
+      const best = options.best !== undefined && options.best !== false;
+      if (best && ids.length > 0) {
+        throw new Failure('`pinloop apply` takes posting ids or `--best`, not both');
+      }
+      nowDoing('applying');
+      let json: any;
+      try {
+        if (best) {
+          const body = typeof options.best === 'string' ? { count: options.best } : {};
+          ({ json } = await callAsAccount(pass, '/apply/best', { method: 'POST', body }));
+        } else {
+          const wanted = await idsToApplyTo(ids);
+          ({ json } = await callAsAccount(pass, '/apply/postings', {
+            method: 'POST',
+            body: { posting_ids: wanted },
+          }));
+        }
+      } catch (error) {
+        // Asked for JSON, a refusal about a limit or the plan is one field of
+        // the one object printed, the way search prints one; read by a person
+        // it stays on the error stream like every other refusal.
+        if (options.json === true && error instanceof Failure && error.status === 402) {
+          printJson({ started: [], refused: error.message });
+          return;
+        }
+        throw error;
+      }
+      if (options.json === true) {
+        printJson(json as Record<string, unknown>);
+        return;
+      }
+      const message = String(json?.message ?? '');
+      if (message !== '') process.stdout.write(`${message}\n`);
+      const started = Array.isArray(json?.started) ? (json.started as Record<string, unknown>[]) : [];
+      if (started.length > 0) process.stdout.write('\n');
+      for (const row of started) process.stdout.write(`${applicationLine(row)}\n`);
+    });
+
+  program
+    .command('applications')
+    .description('show where this account’s applications stand, the one something last happened to first')
+    .argument('[ids...]', 'application ids or posting ids, to show only those applications')
+    .option('--json', 'print one JSON object holding the applications, instead of lines')
+    .action(async (ids: string[], options: { json?: boolean }) => {
+      const pass = readPass();
+      nowDoing('reading applications');
+      const named = ids.flatMap((one) => one.split(',')).filter((one) => one.trim() !== '');
+      const query = named.length === 0 ? '' : `?ids=${encodeURIComponent(named.join(','))}`;
+      const { json } = await callAsAccount(pass, `/apply/status${query}`);
+      if (options.json === true) {
+        printJson(json as Record<string, unknown>);
+        return;
+      }
+      const rows = Array.isArray(json?.applications) ? (json.applications as Record<string, unknown>[]) : [];
+      for (const id of (Array.isArray(json?.not_found) ? json.not_found : []) as unknown[]) {
+        process.stderr.write(`no application of yours has the id ${String(id)}\n`);
+      }
+      if (rows.length === 0) {
+        if (named.length === 0) process.stdout.write('this account currently has no applications\n');
+        return;
+      }
+      for (const row of rows) process.stdout.write(`${applicationLine(row)}\n`);
+      const total = Number(json?.total ?? rows.length);
+      if (total > rows.length) {
+        process.stderr.write(`${rows.length} of ${total} applications shown, the most recent first\n`);
+      }
+      const page = String(json?.applications_page ?? '');
+      if (page !== '') process.stdout.write(`\nReview them here: ${page}\n`);
+    });
+
   const judgment = program
     .command('judgment')
     .description(

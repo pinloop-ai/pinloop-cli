@@ -1,6 +1,6 @@
 {
   "name": "pinloop",
-  "version": "0.8.5",
+  "version": "0.9.0",
   "description": "The Pinloop command line: enable your coding agent to run your whole job search.",
   "type": "module",
   "bin": {
