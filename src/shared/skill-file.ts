@@ -60,7 +60,7 @@
  */
 
 /** The version of the text below. Raised by hand when the text changes. */
-export const SKILL_VERSION = 8;
+export const SKILL_VERSION = 9;
 
 /**
  * The text `pinloop skill` prints and an agent saves.
@@ -118,8 +118,7 @@ something Pinloop offers serves that, and offer it at that moment in plain
 words: what you would do, and what they would get back. When a request is
 open-ended, make a call on how to serve it and say what you chose, rather than
 handing back a list of options. When they expect something Pinloop does not do,
-such as filling in or submitting an application, say so plainly rather than
-letting them find out later.
+say so plainly rather than letting them find out later.
 
 Treat the person as a capable adult running their own job search. The decisions
 are theirs — where to apply, what to spend their time on — and your job is to
